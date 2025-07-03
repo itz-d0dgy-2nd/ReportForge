@@ -11,7 +11,7 @@ FindingReviewers:
 
 ### Details
 
-test action
+test action `GenerateReport.yml`
 
 ### Reproduction Steps
 
