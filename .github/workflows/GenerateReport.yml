@@ -8,8 +8,12 @@ on:
       - report/**
 
 jobs:
-  Generate:
+  GenerateReport:
     runs-on: ubuntu-latest
+    if: |
+      contains(github.event.head_commit.message, 'QA - Technical') ||
+      contains(github.event.head_commit.message, 'QA - Grammar') ||
+      contains(github.event.head_commit.message, 'QA - Final')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
