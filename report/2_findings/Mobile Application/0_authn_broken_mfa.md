@@ -12,6 +12,8 @@ FindingReviewers:
 ### Details
 
 test action `GenerateReport.yml` QA trigger 2
+test action `GenerateReport.yml` without QA trigger 
+
 
 ### Reproduction Steps
 
