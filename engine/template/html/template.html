@@ -341,3 +341,13 @@
         {{ end }}
     </body>
 </html>
+
+{{ if .Frontmatter }}
+    {{ range .Frontmatter.DocumentInformation }}
+        {{ if .DocumentCurrent }}
+            {{ if eq .DocumentMetadata.DocumentStatus "Draft" }}
+                <p class="AE3CEE3B46BEBFFE161D55F7AF5F97F1"></p>
+            {{ end }}
+        {{ end }}
+    {{ end }}
+{{ end }}
