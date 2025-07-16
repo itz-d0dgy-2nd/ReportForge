@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func FrontmatterHandler(file string) FrontmatterJSON {
+func ProcessFrontmatter(file string) FrontmatterJSON {
 
 	projectFrontmatter := FrontmatterJSON{}
 

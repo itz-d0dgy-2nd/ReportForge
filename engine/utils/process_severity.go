@@ -1,6 +1,7 @@
 package Utils
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -20,6 +21,14 @@ func ProcessSeverityMatrix(directory string, file os.DirEntry, storage *Severity
 
 	ErrDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
 	ErrorChecker(ErrDecodeYML)
+
+	if _, validImpact := storage.Impacts[processedYML.FindingImpact]; !validImpact {
+		ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s) - %s", directory, processedYML.FindingName, processedYML.FindingImpact))
+	}
+
+	if _, validLikelihoods := storage.Likelihoods[processedYML.FindingLikelihood]; !validLikelihoods {
+		ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s) - %s", directory, processedYML.FindingName, processedYML.FindingLikelihood))
+	}
 
 	if storage.Matrix[storage.Impacts[processedYML.FindingImpact]][storage.Likelihoods[processedYML.FindingLikelihood]] == "" {
 		storage.Matrix[storage.Impacts[processedYML.FindingImpact]][storage.Likelihoods[processedYML.FindingLikelihood]] = processedYML.FindingID
