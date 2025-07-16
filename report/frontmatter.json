@@ -6,18 +6,6 @@
     "TargetAsset0": "google.com",
     "TargetAsset1": "Google APK"
   },
-  "StakeholderInformation": [
-    {
-      "StakeholderName": "XXX",
-      "StakeholderRole": "XXX",
-      "StakeholderCompany": "XXX"
-    },
-    {
-      "StakeholderName": "XXX",
-      "StakeholderRole": "XXX",
-      "StakeholderCompany": "XXX"
-    }
-  ],
   "DocumentInformation": [
     {
       "DocumentCurrent": false,
@@ -58,6 +46,18 @@
         "DocumentStage": "QA - Final",
         "DocumentContributor": "TC"
       }
+    }
+  ],
+  "StakeholderInformation": [
+    {
+      "StakeholderName": "XXX",
+      "StakeholderRole": "XXX",
+      "StakeholderCompany": "XXX"
+    },
+    {
+      "StakeholderName": "XXX",
+      "StakeholderRole": "XXX",
+      "StakeholderCompany": "XXX"
     }
   ]
 }
