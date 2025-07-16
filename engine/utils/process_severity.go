@@ -27,7 +27,7 @@ func ProcessSeverityMatrix(directory string, file os.DirEntry, storage *Severity
 	}
 
 	if _, validLikelihoods := storage.Likelihoods[processedYML.FindingLikelihood]; !validLikelihoods {
-		ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your impact is supported", directory, processedYML.FindingName, processedYML.FindingLikelihood))
+		ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", directory, processedYML.FindingName, processedYML.FindingLikelihood))
 	}
 
 	if storage.Matrix[storage.Impacts[processedYML.FindingImpact]][storage.Likelihoods[processedYML.FindingLikelihood]] == "" {

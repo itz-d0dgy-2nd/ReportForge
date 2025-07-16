@@ -1,35 +1,22 @@
 @media print{
 
-    @page:first {
-        margin: 0mm;
-        @bottom-right {
-            content: ""; 
-        }
-    }
-          
     @page {
         size: A4 portrait;
         margin: 20mm;
-        @bottom-right {
+
+        @bottom-right-corner {
             content: counter(page) " / " counter(pages) ;
         }
     }
-    
-}
 
-.AE3CEE3B46BEBFFE161D55F7AF5F97F1::before {
-  content: "DRAFT";
-  position: fixed;
-  top: 40%;
-  left: 40%;
-  transform: translate(-50%, -50%) rotate(-30deg);
-  font-size: 10rem;
-  color: rgba(0, 0, 0, 0.05);
-  z-index: 9999;
-  pointer-events: none;
-  white-space: nowrap;
-  font-weight: bold;
-  font-family: Arial, sans-serif;
+    @page:first {
+        size: A4 portrait;
+        margin: 0mm;
+
+        @bottom-right-corner {
+            content: ""; 
+        }
+    }
 }
 
 /* ======== Front Matter Page ======== */
@@ -509,3 +496,17 @@ retest_not_fixed {
     page-break-after: always;
 }
 
+.AE3CEE3B46BEBFFE161D55F7AF5F97F1::before {
+  content: "DRAFT";
+  position: fixed;
+  top: 40%;
+  left: 40%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 10rem;
+  color: rgba(0, 0, 0, 0.05);
+  z-index: 9999;
+  pointer-events: none;
+  white-space: nowrap;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+}
