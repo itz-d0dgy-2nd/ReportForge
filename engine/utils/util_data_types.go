@@ -1,9 +1,8 @@
 package Utils
 
 type FrontmatterYML struct {
-	Client            string            `yaml:"Client"`
-	TargetInformation map[string]string `yaml:"TargetInformation"`
-	// DocumentInformation    []map[string]any  `yaml:"DocumentInformation"`
+	Client              string            `yaml:"Client"`
+	TargetInformation   map[string]string `yaml:"TargetInformation"`
 	DocumentInformation []struct {
 		DocumentCurrent  bool              `yaml:"DocumentCurrent"`
 		DocumentMetadata map[string]string `yaml:"DocumentMetadata"`
