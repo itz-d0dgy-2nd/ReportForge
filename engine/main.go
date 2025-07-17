@@ -7,14 +7,14 @@ import (
 func main() {
 
 	// Yes i know i can improve this but for now its working. Ill come back and refactor later
-	frontmatter := Utils.ProcessFrontmatter("report/frontmatter.yml")
-	severity := Utils.SeverityFileHandler("report/2_findings")
-	reportBody := Utils.MarkdownFileHandler(frontmatter, "report/1_report_body")
-	findings := Utils.MarkdownFileHandler(frontmatter, "report/2_findings")
-	suggestions := Utils.MarkdownFileHandler(frontmatter, "report/3_suggestions")
-	appendices := Utils.MarkdownFileHandler(frontmatter, "report/4_appendices")
+	frontMatter, severityAssessment := Utils.FileHandlerReportConfig("report/0_report_config")
+	reportSummaries := Utils.FileHandlerMarkdown(frontMatter, severityAssessment, "report/1_report_summaries")
+	severity := Utils.FileHandlerSeverity(severityAssessment, "report/2_findings")
+	findings := Utils.FileHandlerMarkdown(frontMatter, severityAssessment, "report/2_findings")
+	suggestions := Utils.FileHandlerMarkdown(frontMatter, severityAssessment, "report/3_suggestions")
+	appendices := Utils.FileHandlerMarkdown(frontMatter, severityAssessment, "report/4_appendices")
 
-	Utils.GenerateHTML(frontmatter, severity, reportBody, findings, suggestions, appendices)
+	Utils.GenerateHTML(frontMatter, reportSummaries, severity, findings, suggestions, appendices)
 	Utils.GeneratePDF()
 	Utils.GenerateXSLX(findings, suggestions)
 

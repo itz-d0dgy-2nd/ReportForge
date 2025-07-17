@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func MarkdownFileHandler(frontmatter FrontmatterYML, directory string) []Markdown {
+func FileHandlerMarkdown(frontMatter FrontmatterYML, severityAssessment SeverityAssessmentYML, directory string) []Markdown {
 
 	processedMD := []Markdown{}
 
@@ -20,16 +20,18 @@ func MarkdownFileHandler(frontmatter FrontmatterYML, directory string) []Markdow
 
 			for _, subdirectoryContents := range readFiles {
 				if filepath.Ext(subdirectoryContents.Name()) == ".md" {
-					ProcessMarkdown(frontmatter, subdirectory, subdirectoryContents, &processedMD)
+					ProcessMarkdown(frontMatter, severityAssessment, subdirectory, subdirectoryContents, &processedMD)
 				}
 			}
 
 		} else if !directoryContents.IsDir() {
 			if filepath.Ext(directoryContents.Name()) == ".md" {
-				ProcessMarkdown(frontmatter, directory, directoryContents, &processedMD)
+				ProcessMarkdown(frontMatter, severityAssessment, directory, directoryContents, &processedMD)
 			}
 		}
 	}
+
+	// To do: Add error handling. What if the files dont exist?
 
 	return processedMD
 

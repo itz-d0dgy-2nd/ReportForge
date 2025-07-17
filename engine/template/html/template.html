@@ -83,7 +83,7 @@
                 {{ end }}
 
                 {{ if .Severity }}
-                <li><a href="#findings-assessment">Findings Assessment</a></li>
+                <li><a href="#severity-assessment">Findings Assessment</a></li>
                 {{ end }}
 
                 {{ if .Findings }}
@@ -209,10 +209,7 @@
                         <td class="finding-name">{{ .Headers.FindingTitle }}</td>
                         <td class="finding-status-{{.Headers.FindingStatus}}">{{ .Headers.FindingStatus }}</td>
                         <td class="finding-severity-{{.Headers.FindingSeverity}}">
-                            {{if eq .Headers.FindingSeverity "0"}}Critical
-                            {{else if eq .Headers.FindingSeverity "1"}}High
-                            {{else if eq .Headers.FindingSeverity "2"}}Medium
-                            {{else if eq .Headers.FindingSeverity "3"}}Low{{end}}
+                            {{ .Headers.FindingSeverity }}
                         </td>
                     </tr>
                     {{ end }}
@@ -223,29 +220,24 @@
         {{ end }}
 
         {{ if .Severity }}
-        <section id="findings-assessment" class="findings-section-assessment">
+        <section id="severity-assessment" class="severity-section-assessment">
             <h1>Findings Assessment</h1> 
             <table>
                 <thead>
                     <tr>
                         <th></th>
-                        <th>Almost Never</th>
-                        <th>Possible but Unlikely</th>
-                        <th>Possible</th>
-                        <th>Highly Probable</th>
-                        <th>Almost Certain</th>
+                        {{ range $key, $value := .Severity.Likelihoods }}
+                        <th>
+                            {{ $value }}
+                        </th>
+                        {{ end }}
                     </tr>
                 </thead>
                 <tbody>
-                    {{range $impact, $intersections := .Severity}}
+                    {{ range $impact, $intersections := .Severity.Matrix }}
                     <tr>
                         <th>
-                            {{if eq $impact 0}}Severe
-                            {{else if eq $impact 1}}Significant
-                            {{else if eq $impact 2}}Moderate
-                            {{else if eq $impact 3}}Minor
-                            {{else if eq $impact 4}}Minimal
-                            {{end}}
+                            {{index $.Severity.Impacts $impact }}
                         </th>
                         {{ range $likelihood, $intersection := $intersections }}
                         <td id="severity-{{$impact}}-{{$likelihood}}">{{ $intersection }}</td>
@@ -284,10 +276,7 @@
                             <td>{{ .Headers.FindingImpact }}</td>
                             <td>{{ .Headers.FindingLikelihood }}</td>
                             <td class="finding-severity-{{.Headers.FindingSeverity}}">
-                                {{if eq .Headers.FindingSeverity "0"}}Critical
-                                {{else if eq .Headers.FindingSeverity "1"}}High
-                                {{else if eq .Headers.FindingSeverity "2"}}Medium
-                                {{else if eq .Headers.FindingSeverity "3"}}Low{{end}}
+                                {{ .Headers.FindingSeverity }}
                             </td>
                         </tr>
                     </tbody>

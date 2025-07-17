@@ -11,11 +11,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessMarkdown(frontmatter FrontmatterYML, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
+func ProcessMarkdown(frontmatter FrontmatterYML, severityAssessment SeverityAssessmentYML, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
 
 	processedYML := MarkdownYML{}
-	currentFileName := file.Name()
+	impact := 0
+	likelihood := 0
 
+	currentFileName := file.Name()
 	readMD, ErrReadMD := os.ReadFile(filepath.Join(directory, currentFileName))
 	ErrorChecker(ErrReadMD)
 
@@ -26,14 +28,35 @@ func ProcessMarkdown(frontmatter FrontmatterYML, directory string, file os.DirEn
 	ErrorChecker(ErrDecodeYML)
 
 	if strings.Contains(directory, "findings") {
-		processedYML.FindingSeverity = CalculateSeverity(processedYML.FindingImpact, processedYML.FindingLikelihood)
+
+		for key, value := range severityAssessment.Impacts {
+			if value == processedYML.FindingImpact {
+				impact = key
+			}
+		}
+
+		for key, value := range severityAssessment.Likelihoods {
+			if value == processedYML.FindingLikelihood {
+				likelihood = key
+			}
+		}
+
+		if _, validImpact := severityAssessment.Impacts[impact]; !validImpact {
+			ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", directory, processedYML.FindingName, processedYML.FindingImpact))
+		}
+
+		if _, validLikelihoods := severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
+			ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", directory, processedYML.FindingName, processedYML.FindingLikelihood))
+		}
+
+		processedYML.FindingSeverity = severityAssessment.CalculatedMatrix[impact][likelihood]
 		currentFileName = processedYML.FindingSeverity + "_" + processedYML.FindingName + ".md"
 		ErrRename := os.Rename(filepath.Join(directory, file.Name()), filepath.Join(directory, currentFileName))
 		ErrorChecker(ErrRename)
 	}
 
 	if strings.Contains(directory, "suggestions") {
-		currentFileName = "4_" + processedYML.SuggestionName + ".md"
+		currentFileName = "Suggestion_" + processedYML.SuggestionName + ".md"
 		ErrRename := os.Rename(filepath.Join(directory, file.Name()), filepath.Join(directory, currentFileName))
 		ErrorChecker(ErrRename)
 	}
