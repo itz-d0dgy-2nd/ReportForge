@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func MarkdownFileHandler(frontmatter FrontmatterYML, directory string) []Markdown {
+func FileHandlerMarkdown(frontmatter FrontmatterYML, matrix SeverityMatrix, directory string) []Markdown {
 
 	processedMD := []Markdown{}
 
@@ -20,13 +20,13 @@ func MarkdownFileHandler(frontmatter FrontmatterYML, directory string) []Markdow
 
 			for _, subdirectoryContents := range readFiles {
 				if filepath.Ext(subdirectoryContents.Name()) == ".md" {
-					ProcessMarkdown(frontmatter, subdirectory, subdirectoryContents, &processedMD)
+					ProcessMarkdown(frontmatter, matrix, subdirectory, subdirectoryContents, &processedMD)
 				}
 			}
 
 		} else if !directoryContents.IsDir() {
 			if filepath.Ext(directoryContents.Name()) == ".md" {
-				ProcessMarkdown(frontmatter, directory, directoryContents, &processedMD)
+				ProcessMarkdown(frontmatter, matrix, directory, directoryContents, &processedMD)
 			}
 		}
 	}

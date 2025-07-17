@@ -1,1 +1,10 @@
-Write this yourself
+# LaTeX
+
+If you find yourself asking: Damn I wish this supports LaTeX. Please fork:
+ 1. Fork this repo
+ 2. Increment the latexDespairCounter++
+ 3. Whisper \frac{sadness}{hope} into the void # Yes I know this LaTeX is invalid
+ 4. Try not to cry. Cry a little anyway.
+ 5. Write this yourself
+
+latexDespairCounter: 2

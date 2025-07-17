@@ -1,16 +1,21 @@
 package Utils
 
 type FrontmatterYML struct {
-	Client                 string            `yaml:"Client"`
-	TargetInformation      map[string]string `yaml:"TargetInformation"`
-	DocumentInformation    []map[string]any  `yaml:"DocumentInformation"`
-	StakeholderInformation []map[string]any  `yaml:"StakeholderInformation"`
+	Client            string            `yaml:"Client"`
+	TargetInformation map[string]string `yaml:"TargetInformation"`
+	// DocumentInformation    []map[string]any  `yaml:"DocumentInformation"`
+	DocumentInformation []struct {
+		DocumentCurrent  bool              `yaml:"DocumentCurrent"`
+		DocumentMetadata map[string]string `yaml:"DocumentMetadata"`
+	} `yaml:"DocumentInformation"`
+	StakeholderInformation []map[string]any `yaml:"StakeholderInformation"`
 }
 
 type SeverityMatrix struct {
-	Impacts     map[string]int
-	Likelihoods map[string]int
-	Matrix      [5][5]string
+	Impacts          map[int]string `yaml:"Impacts"`
+	Likelihoods      map[int]string `yaml:"Likelihoods"`
+	Matrix           [5][5]string   `yaml:"Matrix"`
+	CalculatedMatrix [5][5]string   `yaml:"CalculatedMatrix"`
 }
 
 type MarkdownYML struct {
@@ -47,7 +52,7 @@ type Markdown struct {
 
 type Report struct {
 	Frontmatter     FrontmatterYML
-	Severity        [5][5]string
+	Severity        SeverityMatrix
 	ReportSummaries []Markdown
 	Findings        []Markdown
 	Suggestions     []Markdown

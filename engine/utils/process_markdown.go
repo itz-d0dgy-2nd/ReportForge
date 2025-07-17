@@ -11,11 +11,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessMarkdown(frontmatter FrontmatterYML, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
+func ProcessMarkdown(frontmatter FrontmatterYML, matrix SeverityMatrix, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
 
 	processedYML := MarkdownYML{}
-	currentFileName := file.Name()
+	impact := 0
+	likelihood := 0
 
+	currentFileName := file.Name()
 	readMD, ErrReadMD := os.ReadFile(filepath.Join(directory, currentFileName))
 	ErrorChecker(ErrReadMD)
 
@@ -26,14 +28,27 @@ func ProcessMarkdown(frontmatter FrontmatterYML, directory string, file os.DirEn
 	ErrorChecker(ErrDecodeYML)
 
 	if strings.Contains(directory, "findings") {
-		processedYML.FindingSeverity = CalculateSeverity(processedYML.FindingImpact, processedYML.FindingLikelihood)
+
+		for key, value := range matrix.Impacts {
+			if value == processedYML.FindingImpact {
+				impact = key
+			}
+		}
+
+		for key, value := range matrix.Likelihoods {
+			if value == processedYML.FindingLikelihood {
+				likelihood = key
+			}
+		}
+
+		processedYML.FindingSeverity = matrix.CalculatedMatrix[impact][likelihood]
 		currentFileName = processedYML.FindingSeverity + "_" + processedYML.FindingName + ".md"
 		ErrRename := os.Rename(filepath.Join(directory, file.Name()), filepath.Join(directory, currentFileName))
 		ErrorChecker(ErrRename)
 	}
 
 	if strings.Contains(directory, "suggestions") {
-		currentFileName = "4_" + processedYML.SuggestionName + ".md"
+		currentFileName = "Suggestion_" + processedYML.SuggestionName + ".md"
 		ErrRename := os.Rename(filepath.Join(directory, file.Name()), filepath.Join(directory, currentFileName))
 		ErrorChecker(ErrRename)
 	}

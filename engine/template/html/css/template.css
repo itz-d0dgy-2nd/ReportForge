@@ -453,10 +453,10 @@ figcaption {
 .finding-status-Unresolved { font-weight: bold; color: #ff0000;}
 .finding-status-Resolved { font-weight: bold; color: #00a336;}
 
-.finding-severity-3 { background-color: #a5d63a; }
-.finding-severity-2 { background-color: #f2fa0c; }
-.finding-severity-1 { background-color: #faae0a; }
-.finding-severity-0 { background-color: #ff4a4a; }
+.finding-severity-Low { background-color: #a5d63a; }
+.finding-severity-Medium { background-color: #f2fa0c; }
+.finding-severity-High { background-color: #faae0a; }
+.finding-severity-Critical { background-color: #ff4a4a; }
 
 /* Blockquote Styles */
 blockquote {
