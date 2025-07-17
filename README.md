@@ -13,7 +13,7 @@ For detailed information on this project, please read the [wiki](https://github.
 ## Roadmap:
 
 ### Improvements
-- [ ] Improve finding cross referencing
+- [ ] Improve Findings Table
 - [ ] Improve XLSX generation 
 
 ### Implement

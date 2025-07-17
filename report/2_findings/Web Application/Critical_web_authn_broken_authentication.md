@@ -1,5 +1,5 @@
 ---
-FindingID: B1
+FindingID: Web-01
 FindingName: web_authn_broken_authentication
 FindingTitle: Insecure Authentication
 FindingStatus: Unresolved
@@ -35,7 +35,7 @@ FindingReviewers:
 
 ### Details
 
-This is a paragraph with **bold text**, *italic text*, <mark>highligted</mark> text, `inline code`, and <qa>QA TEXT</qa>. I am now referencing another finding [here](#0_authn_broken_mfa). This sentance was added to test report gen in action
+This is a paragraph with **bold text**, *italic text*, <mark>highligted</mark> text, `inline code`, and <qa>QA TEXT</qa>. I am now referencing another finding [here](#Critical_mobile_authn_broken_mfa). This sentance was added to test report gen in action
 
 - First un-ordered item
 - Second un-ordered item

@@ -1,6 +1,6 @@
 ---
-FindingID: A1
-FindingName: authn_broken_mfa
+FindingID: Mobile-01
+FindingName: mobile_authn_broken_mfa
 FindingTitle: Insecure MultiFactor Authentication (MFA)
 FindingStatus: Resolved
 FindingImpact: Significant

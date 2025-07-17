@@ -12,8 +12,8 @@ import (
 func ProcessSeverityMatrix(directory string, file os.DirEntry, severityAssessment *SeverityAssessmentYML) {
 
 	processedYML := MarkdownYML{}
-	impact := 0
-	likelihood := 0
+	impact := -1
+	likelihood := -1
 
 	currentFileName := file.Name()
 	readMD, ErrReadMD := os.ReadFile(filepath.Join(directory, currentFileName))
