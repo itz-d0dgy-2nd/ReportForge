@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessMarkdown(frontmatter FrontmatterJSON, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
+func ProcessMarkdown(frontmatter FrontmatterYML, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
 
 	processedYML := MarkdownYML{}
 	currentFileName := file.Name()

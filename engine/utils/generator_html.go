@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-func GenerateHTML(frontmatter FrontmatterJSON, severity [5][5]string, reportsummaries []Markdown, findings []Markdown, suggestions []Markdown, appendices []Markdown) {
+func GenerateHTML(frontmatter FrontmatterYML, severity [5][5]string, reportsummaries []Markdown, findings []Markdown, suggestions []Markdown, appendices []Markdown) {
 
 	currentProject := Report{
 		Frontmatter:     frontmatter,

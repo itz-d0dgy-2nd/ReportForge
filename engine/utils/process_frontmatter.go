@@ -1,21 +1,20 @@
 package Utils
 
 import (
-	"bytes"
-	"encoding/json"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
-func ProcessFrontmatter(file string) FrontmatterJSON {
+func ProcessFrontmatter(file string) FrontmatterYML {
 
-	projectFrontmatter := FrontmatterJSON{}
+	processedYML := FrontmatterYML{}
 
-	readJSON, ErrReadJSON := os.ReadFile(file)
-	ErrorChecker(ErrReadJSON)
+	readYML, ErrReadYML := os.ReadFile(file)
+	ErrorChecker(ErrReadYML)
 
-	ErrDecodeJSON := json.NewDecoder(bytes.NewReader(readJSON)).Decode(&projectFrontmatter)
-	ErrorChecker(ErrDecodeJSON)
+	ErrDecodeYML := yaml.Unmarshal(readYML, &processedYML)
+	ErrorChecker(ErrDecodeYML)
 
-	return projectFrontmatter
-
+	return processedYML
 }

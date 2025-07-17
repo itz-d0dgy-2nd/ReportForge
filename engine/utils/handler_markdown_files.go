@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func MarkdownFileHandler(frontmatter FrontmatterJSON, directory string) []Markdown {
+func MarkdownFileHandler(frontmatter FrontmatterYML, directory string) []Markdown {
 
 	processedMD := []Markdown{}
 

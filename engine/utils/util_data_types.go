@@ -1,10 +1,10 @@
 package Utils
 
-type FrontmatterJSON struct {
-	Client                 string            `json:"Client"`
-	TargetInformation      map[string]string `json:"TargetInformation"`
-	DocumentInformation    []map[string]any  `json:"DocumentInformation"`
-	StakeholderInformation []map[string]any  `json:"StakeholderInformation"`
+type FrontmatterYML struct {
+	Client                 string            `yaml:"Client"`
+	TargetInformation      map[string]string `yaml:"TargetInformation"`
+	DocumentInformation    []map[string]any  `yaml:"DocumentInformation"`
+	StakeholderInformation []map[string]any  `yaml:"StakeholderInformation"`
 }
 
 type SeverityMatrix struct {
@@ -46,7 +46,7 @@ type Markdown struct {
 }
 
 type Report struct {
-	Frontmatter     FrontmatterJSON
+	Frontmatter     FrontmatterYML
 	Severity        [5][5]string
 	ReportSummaries []Markdown
 	Findings        []Markdown

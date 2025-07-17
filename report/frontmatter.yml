@@ -1,0 +1,43 @@
+---
+Client: Google
+TargetInformation:
+  TargetName: Google Search
+  TargetTest: Multiple Assessment
+  TargetAsset0: google.com
+  TargetAsset1: Google APK
+DocumentInformation:
+- DocumentCurrent: false
+  DocumentMetadata:
+    DocumentStatus: Draft
+    DocumentVersion: '0.1'
+    DocumentDate: '2025-01-01'
+    DocumentStage: Initial findings
+    DocumentContributor: Jack Moran
+- DocumentCurrent: false
+  DocumentMetadata:
+    DocumentStatus: Draft
+    DocumentVersion: '0.2'
+    DocumentDate: '2025-01-02'
+    DocumentStage: QA - Technical
+    DocumentContributor: Ben Miles
+- DocumentCurrent: false
+  DocumentMetadata:
+    DocumentStatus: Draft
+    DocumentVersion: '0.3'
+    DocumentDate: '2025-01-03'
+    DocumentStage: QA - Grammar
+    DocumentContributor: Elf Eldridge
+- DocumentCurrent: true
+  DocumentMetadata:
+    DocumentStatus: Release
+    DocumentVersion: '1.0'
+    DocumentDate: '2025-01-04'
+    DocumentStage: QA - Final
+    DocumentContributor: TC
+StakeholderInformation:
+- StakeholderName: Bob
+  StakeholderRole: CISO
+  StakeholderCompany: Secrets Inc
+- StakeholderName: Alice
+  StakeholderRole: Project Manager
+  StakeholderCompany: Secrets? Inc
