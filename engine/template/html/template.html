@@ -83,7 +83,7 @@
                 {{ end }}
 
                 {{ if .Severity }}
-                <li><a href="#findings-assessment">Findings Assessment</a></li>
+                <li><a href="#severity-assessment">Findings Assessment</a></li>
                 {{ end }}
 
                 {{ if .Findings }}
@@ -220,27 +220,25 @@
         {{ end }}
 
         {{ if .Severity }}
-        <section id="findings-assessment" class="findings-section-assessment">
+        <section id="severity-assessment" class="severity-section-assessment">
             <h1>Findings Assessment</h1> 
             <table>
                 <thead>
                     <tr>
                         <th></th>
-                        {{range $key, $value := .Severity.Likelihoods }}
+                        {{ range $key, $value := .Severity.Likelihoods }}
                         <th>
                             {{ $value }}
                         </th>
-                        {{end}}
+                        {{ end }}
                     </tr>
                 </thead>
                 <tbody>
                     {{ range $impact, $intersections := .Severity.Matrix }}
-                    
                     <tr>
                         <th>
                             {{index $.Severity.Impacts $impact }}
                         </th>
-                        
                         {{ range $likelihood, $intersection := $intersections }}
                         <td id="severity-{{$impact}}-{{$likelihood}}">{{ $intersection }}</td>
                         {{ end }}
