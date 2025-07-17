@@ -5,10 +5,10 @@ import (
 	"text/template"
 )
 
-func GenerateHTML(frontmatter FrontmatterYML, severity SeverityMatrix, reportsummaries []Markdown, findings []Markdown, suggestions []Markdown, appendices []Markdown) {
+func GenerateHTML(frontMatter FrontmatterYML, severity SeverityAssessmentYML, reportsummaries []Markdown, findings []Markdown, suggestions []Markdown, appendices []Markdown) {
 
 	currentProject := Report{
-		Frontmatter:     frontmatter,
+		Frontmatter:     frontMatter,
 		Severity:        severity,
 		ReportSummaries: reportsummaries,
 		Findings:        findings,

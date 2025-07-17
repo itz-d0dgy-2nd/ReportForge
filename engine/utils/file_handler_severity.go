@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func FileHandlerSeverity(matrix SeverityMatrix, directory string) SeverityMatrix {
+func FileHandlerSeverity(severityAssessment SeverityAssessmentYML, directory string) SeverityAssessmentYML {
 
 	// [^DIA]: https://www.digital.govt.nz/standards-and-guidance/privacy-security-and-risk/risk-management/risk-assessments/analyse/initial-risk-ratings#table-1
 
@@ -20,16 +20,18 @@ func FileHandlerSeverity(matrix SeverityMatrix, directory string) SeverityMatrix
 
 			for _, subdirectoryContents := range readFiles {
 				if filepath.Ext(subdirectoryContents.Name()) == ".md" {
-					ProcessSeverityMatrix(subdirectory, subdirectoryContents, &matrix)
+					ProcessSeverityMatrix(subdirectory, subdirectoryContents, &severityAssessment)
 				}
 			}
 
 		} else if !directoryContents.IsDir() {
 			if filepath.Ext(directoryContents.Name()) == ".md" {
-				ProcessSeverityMatrix(directory, directoryContents, &matrix)
+				ProcessSeverityMatrix(directory, directoryContents, &severityAssessment)
 			}
 		}
 	}
 
-	return matrix
+	// To do: Add error handling. What if the files dont exist?
+
+	return severityAssessment
 }

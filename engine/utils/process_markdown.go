@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessMarkdown(frontmatter FrontmatterYML, matrix SeverityMatrix, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
+func ProcessMarkdown(frontmatter FrontmatterYML, severityAssessment SeverityAssessmentYML, directory string, file os.DirEntry, storage *[]Markdown) []Markdown {
 
 	processedYML := MarkdownYML{}
 	impact := 0
@@ -29,19 +29,27 @@ func ProcessMarkdown(frontmatter FrontmatterYML, matrix SeverityMatrix, director
 
 	if strings.Contains(directory, "findings") {
 
-		for key, value := range matrix.Impacts {
+		for key, value := range severityAssessment.Impacts {
 			if value == processedYML.FindingImpact {
 				impact = key
 			}
 		}
 
-		for key, value := range matrix.Likelihoods {
+		for key, value := range severityAssessment.Likelihoods {
 			if value == processedYML.FindingLikelihood {
 				likelihood = key
 			}
 		}
 
-		processedYML.FindingSeverity = matrix.CalculatedMatrix[impact][likelihood]
+		if _, validImpact := severityAssessment.Impacts[impact]; !validImpact {
+			ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", directory, processedYML.FindingName, processedYML.FindingImpact))
+		}
+
+		if _, validLikelihoods := severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
+			ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", directory, processedYML.FindingName, processedYML.FindingLikelihood))
+		}
+
+		processedYML.FindingSeverity = severityAssessment.CalculatedMatrix[impact][likelihood]
 		currentFileName = processedYML.FindingSeverity + "_" + processedYML.FindingName + ".md"
 		ErrRename := os.Rename(filepath.Join(directory, file.Name()), filepath.Join(directory, currentFileName))
 		ErrorChecker(ErrRename)

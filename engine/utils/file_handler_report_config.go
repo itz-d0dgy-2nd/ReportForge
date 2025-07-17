@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-func FileHandlerReportConfig(directory string) (FrontmatterYML, SeverityMatrix) {
+func FileHandlerReportConfig(directory string) (FrontmatterYML, SeverityAssessmentYML) {
 
 	processedYML := FrontmatterYML{}
-	processedMatrix := SeverityMatrix{}
+	processedSeverityAssessment := SeverityAssessmentYML{}
 
 	readDirectoryContents, ErrReadDirectoryContents := os.ReadDir(directory)
 	ErrorChecker(ErrReadDirectoryContents)
@@ -22,27 +22,28 @@ func FileHandlerReportConfig(directory string) (FrontmatterYML, SeverityMatrix) 
 
 			for _, subdirectoryContents := range readFiles {
 				if filepath.Ext(subdirectoryContents.Name()) == ".yml" {
-					if strings.Contains(subdirectoryContents.Name(), "frontmatter") {
+					if strings.Contains(subdirectoryContents.Name(), "front_matter") {
 						ProcessConfigFrontmatter(subdirectory, subdirectoryContents, &processedYML)
 					}
-					if strings.Contains(subdirectoryContents.Name(), "matrix") {
-						ProcessConfigMatrix(subdirectory, subdirectoryContents, &processedMatrix)
+					if strings.Contains(subdirectoryContents.Name(), "severity_assessment") {
+						ProcessConfigMatrix(subdirectory, subdirectoryContents, &processedSeverityAssessment)
 					}
-
 				}
 			}
 
 		} else if !directoryContents.IsDir() {
 			if filepath.Ext(directoryContents.Name()) == ".yml" {
-				if strings.Contains(directoryContents.Name(), "frontmatter") {
+				if strings.Contains(directoryContents.Name(), "front_matter") {
 					ProcessConfigFrontmatter(directory, directoryContents, &processedYML)
 				}
-				if strings.Contains(directoryContents.Name(), "matrix") {
-					ProcessConfigMatrix(directory, directoryContents, &processedMatrix)
+				if strings.Contains(directoryContents.Name(), "severity_assessment") {
+					ProcessConfigMatrix(directory, directoryContents, &processedSeverityAssessment)
 				}
 			}
 		}
 	}
 
-	return processedYML, processedMatrix
+	// To do: Add error handling. What if the files dont exist?
+
+	return processedYML, processedSeverityAssessment
 }

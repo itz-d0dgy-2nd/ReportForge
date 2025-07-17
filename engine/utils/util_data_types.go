@@ -11,7 +11,7 @@ type FrontmatterYML struct {
 	StakeholderInformation []map[string]any `yaml:"StakeholderInformation"`
 }
 
-type SeverityMatrix struct {
+type SeverityAssessmentYML struct {
 	Impacts          map[int]string `yaml:"Impacts"`
 	Likelihoods      map[int]string `yaml:"Likelihoods"`
 	Matrix           [5][5]string   `yaml:"Matrix"`
@@ -52,7 +52,7 @@ type Markdown struct {
 
 type Report struct {
 	Frontmatter     FrontmatterYML
-	Severity        SeverityMatrix
+	Severity        SeverityAssessmentYML
 	ReportSummaries []Markdown
 	Findings        []Markdown
 	Suggestions     []Markdown

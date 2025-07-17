@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessSeverityMatrix(directory string, file os.DirEntry, storage *SeverityMatrix) {
+func ProcessSeverityMatrix(directory string, file os.DirEntry, severityAssessment *SeverityAssessmentYML) {
 
 	processedYML := MarkdownYML{}
 	impact := 0
@@ -19,36 +19,36 @@ func ProcessSeverityMatrix(directory string, file os.DirEntry, storage *Severity
 	readMD, ErrReadMD := os.ReadFile(filepath.Join(directory, currentFileName))
 	ErrorChecker(ErrReadMD)
 
-	regex := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
-	regexMatches := regex.FindStringSubmatch(string(readMD))
+	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
+	regexMatches := regexYML.FindStringSubmatch(string(readMD))
 
 	ErrDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
 	ErrorChecker(ErrDecodeYML)
 
-	for key, value := range storage.Impacts {
+	for key, value := range severityAssessment.Impacts {
 		if value == processedYML.FindingImpact {
 			impact = key
 		}
 	}
 
-	for key, value := range storage.Likelihoods {
+	for key, value := range severityAssessment.Likelihoods {
 		if value == processedYML.FindingLikelihood {
 			likelihood = key
 		}
 	}
 
-	if _, validImpact := storage.Impacts[impact]; !validImpact {
+	if _, validImpact := severityAssessment.Impacts[impact]; !validImpact {
 		ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", directory, processedYML.FindingName, processedYML.FindingImpact))
 	}
 
-	if _, validLikelihoods := storage.Likelihoods[likelihood]; !validLikelihoods {
+	if _, validLikelihoods := severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
 		ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", directory, processedYML.FindingName, processedYML.FindingLikelihood))
 	}
 
-	if storage.Matrix[impact][likelihood] == "" {
-		storage.Matrix[impact][likelihood] = processedYML.FindingID
+	if severityAssessment.Matrix[impact][likelihood] == "" {
+		severityAssessment.Matrix[impact][likelihood] = processedYML.FindingID
 	} else {
-		storage.Matrix[impact][likelihood] += ", " + processedYML.FindingID
+		severityAssessment.Matrix[impact][likelihood] += ", " + processedYML.FindingID
 	}
 
 }
