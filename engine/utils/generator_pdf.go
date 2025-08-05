@@ -56,6 +56,6 @@ func GeneratePDF() {
 
 	ErrorChecker(chromedp.Run(browserContext, ChromePDFPrint(&bufferPDF)))
 	ErrorChecker(os.WriteFile("Report.pdf", bufferPDF, 0644))
-	ErrorChecker(os.Remove("Report.html"))
+	// ErrorChecker(os.Remove("Report.html"))
 
 }
