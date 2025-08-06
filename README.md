@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="engine/template/html/images/logo.png">
+    <img src="report/0_report_template/html/images/logo.png">
 </p>
 
 > [!Note]

@@ -13,8 +13,8 @@ FindingReviewers:
 
 <retest_fixed>
 
-- Client Veriable: !Client
-- Target Veriable: !TargetAsset0 || !TargetAsset1
+- Client Variable: !Client
+- Target Variable: !TargetAsset0 || !TargetAsset1
   -  First un-ordered Subitem
   - Second un-ordered Subitem 
 - Third un-ordered item
@@ -35,7 +35,7 @@ FindingReviewers:
 
 ### Details
 
-This is a paragraph with **bold text**, *italic text*, <mark>highligted</mark> text, `inline code`, and <qa>QA TEXT</qa>. I am now referencing another finding [here](#Critical_mobile_authn_broken_mfa). This sentance was added to test report gen in action
+This is a paragraph with **bold text**, *italic text*, <mark>highlighted</mark> text, `inline code`, and <qa>QA TEXT</qa>. I am now referencing another finding [here](#Critical_mobile_authn_broken_mfa). This sentance was added to test report gen in action
 
 - First un-ordered item
 - Second un-ordered item
@@ -49,7 +49,7 @@ This is a paragraph with **bold text**, *italic text*, <mark>highligted</mark> t
 
 [Google](https://www.google.com)
 
-![Image Alt Text](report/Screenshots/troll.png)
+![This is the alt text for the troll img](report/Screenshots/troll.png)
 
 > This is a blockquote.
 

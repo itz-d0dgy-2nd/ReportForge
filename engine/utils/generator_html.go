@@ -16,7 +16,7 @@ func GenerateHTML(frontMatter FrontmatterYML, reportSummaries []Markdown, severi
 		Appendices:      appendices,
 	}
 
-	templateHTML, ErrTemplateHTML := template.ParseFiles("engine/template/html/template.html")
+	templateHTML, ErrTemplateHTML := template.ParseFiles("report/0_report_template/html/template.html")
 	ErrorChecker(ErrTemplateHTML)
 
 	createHTML, ErrCreateHTML := os.Create("Report.html")
