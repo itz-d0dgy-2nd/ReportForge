@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -47,8 +48,17 @@ func ChromePDFPrint(bytes *[]byte) chromedp.Tasks {
 func GeneratePDF() {
 
 	bufferPDF := []byte{}
+	execAllocatorOpts := []chromedp.ExecAllocatorOption{}
 
-	executionContext, ErrExecutionContext := chromedp.NewExecAllocator(context.Background(), chromedp.Flag("headless", true), chromedp.Flag("no-sandbox", true))
+	execAllocatorOpts = append(execAllocatorOpts, chromedp.Flag("headless", true))
+
+	if runtime.GOOS == "windows" {
+		execAllocatorOpts = append(execAllocatorOpts,
+			chromedp.ExecPath(`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`),
+		)
+	}
+
+	executionContext, ErrExecutionContext := chromedp.NewExecAllocator(context.Background(), execAllocatorOpts...)
 	defer ErrExecutionContext()
 
 	browserContext, ErrBrowserContext := chromedp.NewContext(executionContext)

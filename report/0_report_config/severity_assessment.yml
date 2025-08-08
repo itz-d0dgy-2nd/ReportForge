@@ -21,7 +21,7 @@ Matrix:
 
 CalculatedMatrix:
  - ["High", "High", "Critical", "Critical", "Critical"]
- - ["medium", "High", "High", "High", "Critical"]
- - ["medium", "medium", "medium", "High", "High"]
- - ["Low", "medium", "medium", "medium", "High"]
- - ["Low", "Low", "medium", "medium", "medium"]
+ - ["Medium", "High", "High", "High", "Critical"]
+ - ["Medium", "Medium", "Medium", "High", "High"]
+ - ["Low", "Medium", "Medium", "Medium", "High"]
+ - ["Low", "Low", "Medium", "Medium", "Medium"]

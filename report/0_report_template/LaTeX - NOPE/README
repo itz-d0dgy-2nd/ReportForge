@@ -4,10 +4,11 @@ If you find yourself asking: Damn I wish this supports LaTeX. Please action the 
  1. Fork this repo
  2. Whisper \frac{sadness}{hope} into the void # Yes I know this LaTeX is invalid
  3. Try not to cry. Cry a little anyway.
- 4. Push your branch and make a PR: 
-   a. With the LaTeX code you wrote for this
-   b. With the latexDespairCounter incremented and your github username
-
+ 4. Either:
+   a. Write the LaTeX code for this functionality
+   b. Increment the latexDespairCounter and add your github username
+ 5. Push your branch, and make a PR
+ 
 LaTexDespairCounter: 2
- - Lostboy
+ - NZLostboy
  - Skelmis
