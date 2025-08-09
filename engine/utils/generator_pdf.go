@@ -58,6 +58,12 @@ func GeneratePDF() {
 		)
 	}
 
+	if os.Getenv("ACTION") == "true" {
+		execAllocatorOpts = append(execAllocatorOpts,
+			chromedp.Flag("no-sandbox", true),
+		)
+	}
+
 	executionContext, ErrExecutionContext := chromedp.NewExecAllocator(context.Background(), execAllocatorOpts...)
 	defer ErrExecutionContext()
 
