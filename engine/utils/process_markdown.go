@@ -89,8 +89,8 @@ func ProcessMarkdown(_reportTemplatePath string, _frontmatter FrontmatterYML, _s
 		processedMD = strings.ReplaceAll(processedMD, "<p></retest_not_fixed></p>", "</retest_not_fixed>")
 	}
 
-	if strings.Contains(processedMD, "Screenshots/troll.png") {
-		processedMD = strings.ReplaceAll(processedMD, "Screenshots/troll.png", _reportTemplatePath+"/Screenshots/troll.png")
+	if strings.Contains(processedMD, "Screenshots/") {
+		processedMD = strings.ReplaceAll(processedMD, "Screenshots/", _reportTemplatePath+"/Screenshots/")
 	}
 
 	*_storage = append(*_storage, Markdown{
