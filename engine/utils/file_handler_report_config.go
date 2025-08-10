@@ -16,7 +16,7 @@ func FileHandlerReportConfig(_directory string) (FrontmatterYML, SeverityAssessm
 
 	for _, directoryContents := range readDirectoryContents {
 		if directoryContents.IsDir() {
-			subdirectory := _directory + "/" + directoryContents.Name()
+			subdirectory := filepath.Join(_directory, directoryContents.Name())
 			readFiles, ErrReadFiles := os.ReadDir(subdirectory)
 			ErrorChecker(ErrReadFiles)
 

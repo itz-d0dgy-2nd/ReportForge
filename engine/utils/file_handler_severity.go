@@ -14,7 +14,7 @@ func FileHandlerSeverity(_severityAssessment SeverityAssessmentYML, _directory s
 
 	for _, directoryContents := range readDirectoryContents {
 		if directoryContents.IsDir() {
-			subdirectory := _directory + "/" + directoryContents.Name()
+			subdirectory := filepath.Join(_directory, directoryContents.Name())
 			readFiles, ErrReadFiles := os.ReadDir(subdirectory)
 			ErrorChecker(ErrReadFiles)
 
