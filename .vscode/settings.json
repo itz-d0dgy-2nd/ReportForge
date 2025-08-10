@@ -1,8 +1,0 @@
-{
-    "files.exclude": {
-        ".gitignore": true,
-        ".gitmodules": true,
-        "go.mod": true,
-        "go.sum": true,
-    }
-}
