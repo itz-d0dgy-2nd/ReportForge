@@ -7,13 +7,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessConfigMatrix(directory string, file os.DirEntry, severityAssessment *SeverityAssessmentYML) {
+func ProcessConfigMatrix(_directory string, _file os.DirEntry, _severityAssessment *SeverityAssessmentYML) {
 
-	currentFileName := file.Name()
-	readYML, ErrReadYML := os.ReadFile(filepath.Join(directory, currentFileName))
+	currentFileName := _file.Name()
+	readYML, ErrReadYML := os.ReadFile(filepath.Join(_directory, currentFileName))
 	ErrorChecker(ErrReadYML)
 
-	ErrDecodeYML := yaml.Unmarshal(readYML, &severityAssessment)
+	ErrDecodeYML := yaml.Unmarshal(readYML, &_severityAssessment)
 	ErrorChecker(ErrDecodeYML)
 
 }

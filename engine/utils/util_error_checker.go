@@ -7,13 +7,13 @@ import (
 	"os"
 )
 
-func ErrorChecker(ErrAny error) {
+func ErrorChecker(_ErrAny error) {
 
-	if ErrAny != nil {
-		if errors.Is(ErrAny, fs.ErrNotExist) {
-			fmt.Printf("::Log:: %s ", ErrAny.Error())
+	if _ErrAny != nil {
+		if errors.Is(_ErrAny, fs.ErrNotExist) {
+			fmt.Printf("::Log:: %s ", _ErrAny.Error())
 		} else {
-			fmt.Printf("::Error:: An error occurred: %s \n", ErrAny.Error())
+			fmt.Printf("::Error:: An error occurred: %s \n", _ErrAny.Error())
 			os.Exit(1)
 		}
 	}

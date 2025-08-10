@@ -7,11 +7,11 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-func GenerateXSLX(findings []Markdown, suggestions []Markdown) {
+func GenerateXSLX(_findings []Markdown, suggestions []Markdown) {
 
 	outputXLSX := excelize.NewFile()
 
-	for _, findingMD := range findings {
+	for _, findingMD := range _findings {
 
 		sheetName := findingMD.Directory
 

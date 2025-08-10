@@ -6,17 +6,17 @@ import (
 	"strings"
 )
 
-func FileHandlerReportConfig(directory string) (FrontmatterYML, SeverityAssessmentYML) {
+func FileHandlerReportConfig(_directory string) (FrontmatterYML, SeverityAssessmentYML) {
 
 	processedYML := FrontmatterYML{}
 	processedSeverityAssessment := SeverityAssessmentYML{}
 
-	readDirectoryContents, ErrReadDirectoryContents := os.ReadDir(directory)
+	readDirectoryContents, ErrReadDirectoryContents := os.ReadDir(_directory)
 	ErrorChecker(ErrReadDirectoryContents)
 
 	for _, directoryContents := range readDirectoryContents {
 		if directoryContents.IsDir() {
-			subdirectory := directory + "/" + directoryContents.Name()
+			subdirectory := _directory + "/" + directoryContents.Name()
 			readFiles, ErrReadFiles := os.ReadDir(subdirectory)
 			ErrorChecker(ErrReadFiles)
 
@@ -34,10 +34,10 @@ func FileHandlerReportConfig(directory string) (FrontmatterYML, SeverityAssessme
 		} else if !directoryContents.IsDir() {
 			if filepath.Ext(directoryContents.Name()) == ".yml" {
 				if strings.Contains(directoryContents.Name(), "front_matter") {
-					ProcessConfigFrontmatter(directory, directoryContents, &processedYML)
+					ProcessConfigFrontmatter(_directory, directoryContents, &processedYML)
 				}
 				if strings.Contains(directoryContents.Name(), "severity_assessment") {
-					ProcessConfigMatrix(directory, directoryContents, &processedSeverityAssessment)
+					ProcessConfigMatrix(_directory, directoryContents, &processedSeverityAssessment)
 				}
 			}
 		}

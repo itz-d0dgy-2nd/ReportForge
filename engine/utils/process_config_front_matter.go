@@ -8,20 +8,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessConfigFrontmatter(directory string, file os.DirEntry, frontMatter *FrontmatterYML) {
+func ProcessConfigFrontmatter(_directory string, _file os.DirEntry, _frontMatter *FrontmatterYML) {
 
-	currentFileName := file.Name()
-	readYML, ErrReadYML := os.ReadFile(filepath.Join(directory, currentFileName))
+	currentFileName := _file.Name()
+	readYML, ErrReadYML := os.ReadFile(filepath.Join(_directory, currentFileName))
 	ErrorChecker(ErrReadYML)
 
-	ErrDecodeYML := yaml.Unmarshal(readYML, &frontMatter)
+	ErrDecodeYML := yaml.Unmarshal(readYML, &_frontMatter)
 	ErrorChecker(ErrDecodeYML)
 
-	for _, information := range frontMatter.DocumentInformation {
+	for _, information := range _frontMatter.DocumentInformation {
 		for metadataKey, metadata := range information.DocumentMetadata {
 			if metadataKey == "DocumentStatus" {
 				if metadata != "Draft" && metadata != "Release" {
-					ErrorChecker(fmt.Errorf("invalid documentStatus in frontmatter (%s/%s - %s) - please check that your documentStatus is 'Draft' or 'Release'", directory, currentFileName, metadata))
+					ErrorChecker(fmt.Errorf("invalid documentStatus in frontmatter (%s/%s - %s) - please check that your documentStatus is 'Draft' or 'Release'", _directory, currentFileName, metadata))
 				}
 			}
 		}

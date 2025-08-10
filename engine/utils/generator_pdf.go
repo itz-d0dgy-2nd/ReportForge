@@ -10,7 +10,7 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func ChromePDFPrint(bytes *[]byte) chromedp.Tasks {
+func ChromePDFPrint(_bytes *[]byte) chromedp.Tasks {
 
 	absPath, ErrAbsPath := filepath.Abs("Report.html")
 	ErrorChecker(ErrAbsPath)
@@ -38,7 +38,7 @@ func ChromePDFPrint(bytes *[]byte) chromedp.Tasks {
 				Do(context)
 			ErrorChecker(ErrPrint)
 
-			*bytes = print
+			*_bytes = print
 			return nil
 
 		}),

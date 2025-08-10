@@ -5,18 +5,19 @@ import (
 	"text/template"
 )
 
-func GenerateHTML(frontMatter FrontmatterYML, reportSummaries []Markdown, severity SeverityAssessmentYML, findings []Markdown, suggestions []Markdown, appendices []Markdown) {
+func GenerateHTML(_reportTemplatePath, _HTMLTemplatePath string, _frontMatter FrontmatterYML, _reportSummaries []Markdown, _severity SeverityAssessmentYML, _findings []Markdown, _suggestions []Markdown, _appendices []Markdown) {
 
 	currentProject := Report{
-		Frontmatter:     frontMatter,
-		ReportSummaries: reportSummaries,
-		Severity:        severity,
-		Findings:        findings,
-		Suggestions:     suggestions,
-		Appendices:      appendices,
+		Frontmatter:     _frontMatter,
+		ReportSummaries: _reportSummaries,
+		Severity:        _severity,
+		Findings:        _findings,
+		Suggestions:     _suggestions,
+		Appendices:      _appendices,
+		Path:            _reportTemplatePath,
 	}
 
-	templateHTML, ErrTemplateHTML := template.ParseFiles("report/0_report_template/html/template.html")
+	templateHTML, ErrTemplateHTML := template.ParseFiles(_HTMLTemplatePath)
 	ErrorChecker(ErrTemplateHTML)
 
 	createHTML, ErrCreateHTML := os.Create("Report.html")

@@ -56,4 +56,5 @@ type Report struct {
 	Findings        []Markdown
 	Suggestions     []Markdown
 	Appendices      []Markdown
+	Path            string
 }

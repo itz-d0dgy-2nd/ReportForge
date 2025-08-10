@@ -9,14 +9,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessSeverityMatrix(directory string, file os.DirEntry, severityAssessment *SeverityAssessmentYML) {
+func ProcessSeverityMatrix(_directory string, _file os.DirEntry, _severityAssessment *SeverityAssessmentYML) {
 
 	processedYML := MarkdownYML{}
 	impact := -1
 	likelihood := -1
 
-	currentFileName := file.Name()
-	readMD, ErrReadMD := os.ReadFile(filepath.Join(directory, currentFileName))
+	currentFileName := _file.Name()
+	readMD, ErrReadMD := os.ReadFile(filepath.Join(_directory, currentFileName))
 	ErrorChecker(ErrReadMD)
 
 	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
@@ -25,30 +25,30 @@ func ProcessSeverityMatrix(directory string, file os.DirEntry, severityAssessmen
 	ErrDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
 	ErrorChecker(ErrDecodeYML)
 
-	for key, value := range severityAssessment.Impacts {
+	for key, value := range _severityAssessment.Impacts {
 		if value == processedYML.FindingImpact {
 			impact = key
 		}
 	}
 
-	for key, value := range severityAssessment.Likelihoods {
+	for key, value := range _severityAssessment.Likelihoods {
 		if value == processedYML.FindingLikelihood {
 			likelihood = key
 		}
 	}
 
-	if _, validImpact := severityAssessment.Impacts[impact]; !validImpact {
-		ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", directory, processedYML.FindingName, processedYML.FindingImpact))
+	if _, validImpact := _severityAssessment.Impacts[impact]; !validImpact {
+		ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", _directory, processedYML.FindingName, processedYML.FindingImpact))
 	}
 
-	if _, validLikelihoods := severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
-		ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", directory, processedYML.FindingName, processedYML.FindingLikelihood))
+	if _, validLikelihoods := _severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
+		ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", _directory, processedYML.FindingName, processedYML.FindingLikelihood))
 	}
 
-	if severityAssessment.Matrix[impact][likelihood] == "" {
-		severityAssessment.Matrix[impact][likelihood] = processedYML.FindingID
+	if _severityAssessment.Matrix[impact][likelihood] == "" {
+		_severityAssessment.Matrix[impact][likelihood] = processedYML.FindingID
 	} else {
-		severityAssessment.Matrix[impact][likelihood] += ", " + processedYML.FindingID
+		_severityAssessment.Matrix[impact][likelihood] += ", " + processedYML.FindingID
 	}
 
 }
