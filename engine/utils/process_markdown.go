@@ -11,21 +11,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessMarkdown(_reportTemplatePath string, _frontmatter FrontmatterYML, _severityAssessment SeverityAssessmentYML, _directory string, _file os.DirEntry, _storage *[]Markdown) []Markdown {
+func ProcessMarkdown(_reportPath string, _frontmatter FrontmatterYML, _severityAssessment SeverityAssessmentYML, _directory string, _file os.DirEntry, _processedMD *[]Markdown) []Markdown {
 
 	processedYML := MarkdownYML{}
 	impact := -1
 	likelihood := -1
 
 	currentFileName := _file.Name()
-	readMD, ErrReadMD := os.ReadFile(filepath.Join(_directory, currentFileName))
-	ErrorChecker(ErrReadMD)
+	readMD, errReadMD := os.ReadFile(filepath.Join(_directory, currentFileName))
+	ErrorChecker(errReadMD)
 
 	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
 	regexMatches := regexYML.FindStringSubmatch(string(readMD))
 
-	ErrDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
-	ErrorChecker(ErrDecodeYML)
+	errDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
+	ErrorChecker(errDecodeYML)
 
 	if strings.Contains(_directory, "findings") {
 
@@ -51,14 +51,14 @@ func ProcessMarkdown(_reportTemplatePath string, _frontmatter FrontmatterYML, _s
 
 		processedYML.FindingSeverity = _severityAssessment.CalculatedMatrix[impact][likelihood]
 		currentFileName = processedYML.FindingSeverity + "_" + processedYML.FindingName + ".md"
-		ErrRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Join(_directory, currentFileName))
-		ErrorChecker(ErrRename)
+		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Join(_directory, currentFileName))
+		ErrorChecker(errRename)
 	}
 
 	if strings.Contains(_directory, "suggestions") {
 		currentFileName = "Suggestion_" + processedYML.SuggestionName + ".md"
-		ErrRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Join(_directory, currentFileName))
-		ErrorChecker(ErrRename)
+		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Join(_directory, currentFileName))
+		ErrorChecker(errRename)
 	}
 
 	processedMD := string(blackfriday.Run([]byte(regexMatches[2])))
@@ -90,16 +90,16 @@ func ProcessMarkdown(_reportTemplatePath string, _frontmatter FrontmatterYML, _s
 	}
 
 	if strings.Contains(processedMD, "Screenshots/") {
-		processedMD = strings.ReplaceAll(processedMD, "Screenshots/", _reportTemplatePath+"/Screenshots/")
+		processedMD = strings.ReplaceAll(processedMD, "Screenshots/", _reportPath+"/Screenshots/")
 	}
 
-	*_storage = append(*_storage, Markdown{
+	*_processedMD = append(*_processedMD, Markdown{
 		Directory: filepath.Base(_directory),
 		FileName:  strings.TrimSuffix(currentFileName, filepath.Ext(currentFileName)),
 		Headers:   processedYML,
 		Body:      processedMD,
 	})
 
-	return *_storage
+	return *_processedMD
 
 }

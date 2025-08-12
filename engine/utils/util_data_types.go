@@ -50,11 +50,11 @@ type Markdown struct {
 }
 
 type Report struct {
-	Frontmatter     FrontmatterYML
-	Severity        SeverityAssessmentYML
-	ReportSummaries []Markdown
-	Findings        []Markdown
-	Suggestions     []Markdown
-	Appendices      []Markdown
-	Path            string
+	Frontmatter FrontmatterYML
+	Severity    SeverityAssessmentYML
+	Summaries   []Markdown
+	Findings    []Markdown
+	Suggestions []Markdown
+	Appendices  []Markdown
+	Path        string
 }

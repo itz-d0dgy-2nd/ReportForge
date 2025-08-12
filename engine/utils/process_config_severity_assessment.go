@@ -10,10 +10,10 @@ import (
 func ProcessConfigMatrix(_directory string, _file os.DirEntry, _severityAssessment *SeverityAssessmentYML) {
 
 	currentFileName := _file.Name()
-	readYML, ErrReadYML := os.ReadFile(filepath.Join(_directory, currentFileName))
-	ErrorChecker(ErrReadYML)
+	readYML, errReadYML := os.ReadFile(filepath.Join(_directory, currentFileName))
+	ErrorChecker(errReadYML)
 
-	ErrDecodeYML := yaml.Unmarshal(readYML, &_severityAssessment)
-	ErrorChecker(ErrDecodeYML)
+	errDecodeYML := yaml.Unmarshal(readYML, &_severityAssessment)
+	ErrorChecker(errDecodeYML)
 
 }

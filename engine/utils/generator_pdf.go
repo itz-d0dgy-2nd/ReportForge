@@ -28,7 +28,7 @@ func ChromePDFPrint(_bytes *[]byte) chromedp.Tasks {
 			//   WithPaperWidth() & WithPaperHeight() are dumb
 			//   WithPreferCSSPageSize() works better
 
-			print, _, ErrPrint := page.PrintToPDF().
+			print, _, errPrint := page.PrintToPDF().
 				WithPrintBackground(true).
 				WithMarginTop(0).
 				WithMarginBottom(0).
@@ -36,7 +36,7 @@ func ChromePDFPrint(_bytes *[]byte) chromedp.Tasks {
 				WithMarginRight(0).
 				WithPreferCSSPageSize(true).
 				Do(context)
-			ErrorChecker(ErrPrint)
+			ErrorChecker(errPrint)
 
 			*_bytes = print
 			return nil

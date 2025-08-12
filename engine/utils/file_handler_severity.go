@@ -5,18 +5,22 @@ import (
 	"path/filepath"
 )
 
+/*
+FileHandlerMarkdown function -> Handles markdown files
+  - Read provided directory contents
+  - Iterate over directory structure
+  - foreach `.md` file call `ProcessSeverityMatrix()`
+*/
 func FileHandlerSeverity(_severityAssessment SeverityAssessmentYML, _directory string) SeverityAssessmentYML {
 
-	// [^DIA]: https://www.digital.govt.nz/standards-and-guidance/privacy-security-and-risk/risk-management/risk-assessments/analyse/initial-risk-ratings#table-1
-
-	readDirectoryContents, ErrReadDirectoryContents := os.ReadDir(_directory)
-	ErrorChecker(ErrReadDirectoryContents)
+	readDirectoryContents, errReadDirectoryContents := os.ReadDir(_directory)
+	ErrorChecker(errReadDirectoryContents)
 
 	for _, directoryContents := range readDirectoryContents {
 		if directoryContents.IsDir() {
 			subdirectory := filepath.Join(_directory, directoryContents.Name())
-			readFiles, ErrReadFiles := os.ReadDir(subdirectory)
-			ErrorChecker(ErrReadFiles)
+			readFiles, errReadFiles := os.ReadDir(subdirectory)
+			ErrorChecker(errReadFiles)
 
 			for _, subdirectoryContents := range readFiles {
 				if filepath.Ext(subdirectoryContents.Name()) == ".md" {

@@ -11,11 +11,11 @@ import (
 func ProcessConfigFrontmatter(_directory string, _file os.DirEntry, _frontMatter *FrontmatterYML) {
 
 	currentFileName := _file.Name()
-	readYML, ErrReadYML := os.ReadFile(filepath.Join(_directory, currentFileName))
-	ErrorChecker(ErrReadYML)
+	readYML, errReadYML := os.ReadFile(filepath.Join(_directory, currentFileName))
+	ErrorChecker(errReadYML)
 
-	ErrDecodeYML := yaml.Unmarshal(readYML, &_frontMatter)
-	ErrorChecker(ErrDecodeYML)
+	errDecodeYML := yaml.Unmarshal(readYML, &_frontMatter)
+	ErrorChecker(errDecodeYML)
 
 	for _, information := range _frontMatter.DocumentInformation {
 		for metadataKey, metadata := range information.DocumentMetadata {

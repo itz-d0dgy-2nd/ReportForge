@@ -16,14 +16,14 @@ func ProcessSeverityMatrix(_directory string, _file os.DirEntry, _severityAssess
 	likelihood := -1
 
 	currentFileName := _file.Name()
-	readMD, ErrReadMD := os.ReadFile(filepath.Join(_directory, currentFileName))
-	ErrorChecker(ErrReadMD)
+	readMD, errReadMD := os.ReadFile(filepath.Join(_directory, currentFileName))
+	ErrorChecker(errReadMD)
 
 	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
 	regexMatches := regexYML.FindStringSubmatch(string(readMD))
 
-	ErrDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
-	ErrorChecker(ErrDecodeYML)
+	errDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
+	ErrorChecker(errDecodeYML)
 
 	for key, value := range _severityAssessment.Impacts {
 		if value == processedYML.FindingImpact {

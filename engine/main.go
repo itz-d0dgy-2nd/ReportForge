@@ -6,32 +6,71 @@ import (
 	"path/filepath"
 )
 
+/*
+Main function -> Sets up ReportForge:
+  - Configures arguments
+  - Configures operating specific file paths
+  - Executes file handlers
+  - Generates reports
+*/
 func main() {
-	devMode := flag.Bool("dev", false, "Run in development mode (e.g., `go run engine/main.go --dev`)")
+
+	// Create an argument parser:
+	//   - Flag ( `--dev` ):
+	//     Account for the nested report directory due to git submodule
+
+	devMode := flag.Bool("dev", false, "Run in development mode")
 	flag.Parse()
 
-	// Yes i know i can improve this but for now its working. Ill come back and refactor later
-	reportTemplatePath := filepath.Join("report")
+	// Create operating system specific file paths:
+	//   - Linux/MacOS:
+	//     report/
+	//
+	//   - Windows:
+	//     report\
+
+	reportPath := filepath.Join("report")
 	if *devMode {
-		reportTemplatePath = filepath.Join(reportTemplatePath, "report")
+		reportPath = filepath.Join(reportPath, "report")
 	}
-	reportConfigPath := filepath.Join(reportTemplatePath, "0_report_config")
-	reportSummariesPath := filepath.Join(reportTemplatePath, "1_summaries")
-	reportFindingsPath := filepath.Join(reportTemplatePath, "2_findings")
-	reportSuggestionsPath := filepath.Join(reportTemplatePath, "3_suggestions")
-	reportAppendicesPath := filepath.Join(reportTemplatePath, "4_appendices")
-	HTMLTemplatePath := filepath.Join(reportTemplatePath, "0_report_template", "html", "template.html")
+	reportConfigPath := filepath.Join(reportPath, "0_report_config")
+	reportSummariesPath := filepath.Join(reportPath, "1_summaries")
+	reportFindingsPath := filepath.Join(reportPath, "2_findings")
+	reportSuggestionsPath := filepath.Join(reportPath, "3_suggestions")
+	reportAppendicesPath := filepath.Join(reportPath, "4_appendices")
+	HTMLTemplatePath := filepath.Join(reportPath, "0_report_template", "html", "template.html")
 
-	// Yes i know i can improve this but for now its working. Ill come back and refactor later
-	frontMatter, severityAssessment := Utils.FileHandlerReportConfig(reportConfigPath)
-	reportSummaries := Utils.FileHandlerMarkdown(reportTemplatePath, frontMatter, severityAssessment, reportSummariesPath)
+	// Execute ReportForge functionality
+	//   - FileHandlerReportConfig( string ):
+	// 	   Iterates over directory structure foreach .yml file call ProcessConfigFrontmatter()
+	//     Returns FrontmatterYML, SeverityAssessmentYML
+	//
+	//   - FileHandlerSeverity( SeverityAssessmentYML, string ):
+	//     Iterates over directory structure foreach .md file call ProcessSeverityMatrix()
+	//	   Returns SeverityAssessmentYML
+	//
+	//   - FileHandlerMarkdown( string, FrontmatterYML, SeverityAssessmentYML. string ):
+	//     Iterates over directory structure foreach .md file call ProcessMarkdown()
+	//     Returns processedMD
+
+	frontmatter, severityAssessment := Utils.FileHandlerReportConfig(reportConfigPath)
 	severity := Utils.FileHandlerSeverity(severityAssessment, reportFindingsPath)
-	findings := Utils.FileHandlerMarkdown(reportTemplatePath, frontMatter, severityAssessment, reportFindingsPath)
-	suggestions := Utils.FileHandlerMarkdown(reportTemplatePath, frontMatter, severityAssessment, reportSuggestionsPath)
-	appendices := Utils.FileHandlerMarkdown(reportTemplatePath, frontMatter, severityAssessment, reportAppendicesPath)
+	summaries := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportSummariesPath)
+	findings := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportFindingsPath)
+	suggestions := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportSuggestionsPath)
+	appendices := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportAppendicesPath)
 
-	// Yes i know i can improve this but for now its working. Ill come back and refactor later
-	Utils.GenerateHTML(reportTemplatePath, HTMLTemplatePath, frontMatter, reportSummaries, severity, findings, suggestions, appendices)
-	Utils.GeneratePDF()
+	// Execute ReportForge functionality
+	//   - GenerateHTML( FrontmatterYML,  SeverityAssessmentYML, []Markdown, []Markdown, []Markdown, []Markdown,, string, string ):
+	//     Create HTML report
+	//
+	//   - GenerateXSLX( []Markdown, []Markdown ):
+	//     Create XSLX report
+	//
+	//   - GeneratePDF():
+	//     Create PDF report
+
+	Utils.GenerateHTML(frontmatter, severity, summaries, findings, suggestions, appendices, reportPath, HTMLTemplatePath)
 	Utils.GenerateXSLX(findings, suggestions)
+	Utils.GeneratePDF()
 }

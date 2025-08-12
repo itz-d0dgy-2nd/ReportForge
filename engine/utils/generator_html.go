@@ -5,27 +5,27 @@ import (
 	"text/template"
 )
 
-func GenerateHTML(_reportTemplatePath, _HTMLTemplatePath string, _frontMatter FrontmatterYML, _reportSummaries []Markdown, _severity SeverityAssessmentYML, _findings []Markdown, _suggestions []Markdown, _appendices []Markdown) {
+func GenerateHTML(_frontmatter FrontmatterYML, _severity SeverityAssessmentYML, _summaries []Markdown, _findings []Markdown, _suggestions []Markdown, _appendices []Markdown, _reportTemplatePath string, _HTMLTemplatePath string) {
 
 	currentProject := Report{
-		Frontmatter:     _frontMatter,
-		ReportSummaries: _reportSummaries,
-		Severity:        _severity,
-		Findings:        _findings,
-		Suggestions:     _suggestions,
-		Appendices:      _appendices,
-		Path:            _reportTemplatePath,
+		Frontmatter: _frontmatter,
+		Severity:    _severity,
+		Summaries:   _summaries,
+		Findings:    _findings,
+		Suggestions: _suggestions,
+		Appendices:  _appendices,
+		Path:        _reportTemplatePath,
 	}
 
-	templateHTML, ErrTemplateHTML := template.ParseFiles(_HTMLTemplatePath)
-	ErrorChecker(ErrTemplateHTML)
+	templateHTML, errTemplateHTML := template.ParseFiles(_HTMLTemplatePath)
+	ErrorChecker(errTemplateHTML)
 
-	createHTML, ErrCreateHTML := os.Create("Report.html")
-	ErrorChecker(ErrCreateHTML)
+	createHTML, errCreateHTML := os.Create("Report.html")
+	ErrorChecker(errCreateHTML)
 
 	defer createHTML.Close()
 
-	ErrGenerateHTML := templateHTML.Execute(createHTML, currentProject)
-	ErrorChecker(ErrGenerateHTML)
+	errGenerateHTML := templateHTML.Execute(createHTML, currentProject)
+	ErrorChecker(errGenerateHTML)
 
 }

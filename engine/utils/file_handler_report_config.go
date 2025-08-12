@@ -6,19 +6,27 @@ import (
 	"strings"
 )
 
+/*
+FileHandlerReportConfig function -> Handles markdown files
+  - Instantiate a variable of type `FrontmatterYML`, and `SeverityAssessmentYML`
+  - Read provided directory contents
+  - Iterate over directory structure
+  - foreach `.yml` file call `ProcessConfigFrontmatter()`, and `ProcessConfigMatrix()`
+  - Return variables of type `FrontmatterYML`, and `SeverityAssessmentYML`
+*/
 func FileHandlerReportConfig(_directory string) (FrontmatterYML, SeverityAssessmentYML) {
 
 	processedYML := FrontmatterYML{}
 	processedSeverityAssessment := SeverityAssessmentYML{}
 
-	readDirectoryContents, ErrReadDirectoryContents := os.ReadDir(_directory)
-	ErrorChecker(ErrReadDirectoryContents)
+	readDirectoryContents, errReadDirectoryContents := os.ReadDir(_directory)
+	ErrorChecker(errReadDirectoryContents)
 
 	for _, directoryContents := range readDirectoryContents {
 		if directoryContents.IsDir() {
 			subdirectory := filepath.Join(_directory, directoryContents.Name())
-			readFiles, ErrReadFiles := os.ReadDir(subdirectory)
-			ErrorChecker(ErrReadFiles)
+			readFiles, errReadFiles := os.ReadDir(subdirectory)
+			ErrorChecker(errReadFiles)
 
 			for _, subdirectoryContents := range readFiles {
 				if filepath.Ext(subdirectoryContents.Name()) == ".yml" {
