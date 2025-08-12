@@ -6,10 +6,9 @@ import (
 )
 
 /*
-FileHandlerMarkdown function -> Handles markdown files
-  - Read provided directory contents
-  - Iterate over directory structure
-  - foreach `.md` file call `ProcessSeverityMatrix()`
+FileHandlerSeverity function -> Handles markdown files
+
+	XXX
 */
 func FileHandlerSeverity(_severityAssessment SeverityAssessmentYML, _directory string) SeverityAssessmentYML {
 
@@ -18,7 +17,7 @@ func FileHandlerSeverity(_severityAssessment SeverityAssessmentYML, _directory s
 
 	for _, directoryContents := range readDirectoryContents {
 		if directoryContents.IsDir() {
-			subdirectory := filepath.Join(_directory, directoryContents.Name())
+			subdirectory := filepath.Clean(filepath.Join(_directory, directoryContents.Name()))
 			readFiles, errReadFiles := os.ReadDir(subdirectory)
 			ErrorChecker(errReadFiles)
 
@@ -35,7 +34,6 @@ func FileHandlerSeverity(_severityAssessment SeverityAssessmentYML, _directory s
 		}
 	}
 
-	// To do: Add error handling. What if the files dont exist?
-
 	return _severityAssessment
+
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,11 +17,13 @@ func ProcessSeverityMatrix(_directory string, _file os.DirEntry, _severityAssess
 	likelihood := -1
 
 	currentFileName := _file.Name()
-	readMD, errReadMD := os.ReadFile(filepath.Join(_directory, currentFileName))
+	currentFileFullPath := filepath.Clean(filepath.Join(_directory, currentFileName))
+	readMD, errReadMD := os.ReadFile(currentFileFullPath)
 	ErrorChecker(errReadMD)
 
+	markdown := strings.ReplaceAll(string(readMD), "\r\n", "\n")
 	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
-	regexMatches := regexYML.FindStringSubmatch(string(readMD))
+	regexMatches := regexYML.FindStringSubmatch(markdown)
 
 	errDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
 	ErrorChecker(errDecodeYML)

@@ -11,7 +11,7 @@ import (
 func ProcessConfigFrontmatter(_directory string, _file os.DirEntry, _frontMatter *FrontmatterYML) {
 
 	currentFileName := _file.Name()
-	readYML, errReadYML := os.ReadFile(filepath.Join(_directory, currentFileName))
+	readYML, errReadYML := os.ReadFile(filepath.Clean(filepath.Join(_directory, currentFileName)))
 	ErrorChecker(errReadYML)
 
 	errDecodeYML := yaml.Unmarshal(readYML, &_frontMatter)

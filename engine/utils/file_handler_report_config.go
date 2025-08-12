@@ -7,12 +7,9 @@ import (
 )
 
 /*
-FileHandlerReportConfig function -> Handles markdown files
-  - Instantiate a variable of type `FrontmatterYML`, and `SeverityAssessmentYML`
-  - Read provided directory contents
-  - Iterate over directory structure
-  - foreach `.yml` file call `ProcessConfigFrontmatter()`, and `ProcessConfigMatrix()`
-  - Return variables of type `FrontmatterYML`, and `SeverityAssessmentYML`
+FileHandlerReportConfig function -> Handles yml files
+
+	XXX
 */
 func FileHandlerReportConfig(_directory string) (FrontmatterYML, SeverityAssessmentYML) {
 
@@ -24,7 +21,7 @@ func FileHandlerReportConfig(_directory string) (FrontmatterYML, SeverityAssessm
 
 	for _, directoryContents := range readDirectoryContents {
 		if directoryContents.IsDir() {
-			subdirectory := filepath.Join(_directory, directoryContents.Name())
+			subdirectory := filepath.Clean(filepath.Join(_directory, directoryContents.Name()))
 			readFiles, errReadFiles := os.ReadDir(subdirectory)
 			ErrorChecker(errReadFiles)
 
@@ -51,7 +48,6 @@ func FileHandlerReportConfig(_directory string) (FrontmatterYML, SeverityAssessm
 		}
 	}
 
-	// To do: Add error handling. What if the files dont exist?
-
 	return processedYML, processedSeverityAssessment
+
 }

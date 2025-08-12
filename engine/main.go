@@ -29,16 +29,16 @@ func main() {
 	//   - Windows:
 	//     report\
 
-	reportPath := filepath.Join("report")
+	reportPath := filepath.Clean(filepath.Join("report"))
 	if *devMode {
-		reportPath = filepath.Join(reportPath, "report")
+		reportPath = filepath.Clean(filepath.Join(reportPath, "report"))
 	}
-	reportConfigPath := filepath.Join(reportPath, "0_report_config")
-	reportSummariesPath := filepath.Join(reportPath, "1_summaries")
-	reportFindingsPath := filepath.Join(reportPath, "2_findings")
-	reportSuggestionsPath := filepath.Join(reportPath, "3_suggestions")
-	reportAppendicesPath := filepath.Join(reportPath, "4_appendices")
-	HTMLTemplatePath := filepath.Join(reportPath, "0_report_template", "html", "template.html")
+	reportConfigPath := filepath.Clean(filepath.Join(reportPath, "0_report_config"))
+	reportSummariesPath := filepath.Clean(filepath.Join(reportPath, "1_summaries"))
+	reportFindingsPath := filepath.Clean(filepath.Join(reportPath, "2_findings"))
+	reportSuggestionsPath := filepath.Clean(filepath.Join(reportPath, "3_suggestions"))
+	reportAppendicesPath := filepath.Clean(filepath.Join(reportPath, "4_appendices"))
+	HTMLTemplatePath := filepath.Clean(filepath.Join(reportPath, "0_report_template", "html", "template.html"))
 
 	// Execute ReportForge functionality
 	//   - FileHandlerReportConfig( string ):
@@ -55,10 +55,10 @@ func main() {
 
 	frontmatter, severityAssessment := Utils.FileHandlerReportConfig(reportConfigPath)
 	severity := Utils.FileHandlerSeverity(severityAssessment, reportFindingsPath)
-	summaries := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportSummariesPath)
-	findings := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportFindingsPath)
-	suggestions := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportSuggestionsPath)
-	appendices := Utils.FileHandlerMarkdown(reportPath, frontmatter, severityAssessment, reportAppendicesPath)
+	summaries := Utils.FileHandlerMarkdown(reportPath, reportSummariesPath, frontmatter, severityAssessment)
+	findings := Utils.FileHandlerMarkdown(reportPath, reportFindingsPath, frontmatter, severityAssessment)
+	suggestions := Utils.FileHandlerMarkdown(reportPath, reportSuggestionsPath, frontmatter, severityAssessment)
+	appendices := Utils.FileHandlerMarkdown(reportPath, reportAppendicesPath, frontmatter, severityAssessment)
 
 	// Execute ReportForge functionality
 	//   - GenerateHTML( FrontmatterYML,  SeverityAssessmentYML, []Markdown, []Markdown, []Markdown, []Markdown,, string, string ):

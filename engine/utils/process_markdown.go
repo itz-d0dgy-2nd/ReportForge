@@ -11,18 +11,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessMarkdown(_reportPath string, _frontmatter FrontmatterYML, _severityAssessment SeverityAssessmentYML, _directory string, _file os.DirEntry, _processedMD *[]Markdown) []Markdown {
+func ProcessMarkdown(_reportPath string, _directory string, _file os.DirEntry, _processedMD *[]Markdown, _frontmatter FrontmatterYML, _severityAssessment SeverityAssessmentYML) []Markdown {
 
 	processedYML := MarkdownYML{}
 	impact := -1
 	likelihood := -1
 
 	currentFileName := _file.Name()
-	readMD, errReadMD := os.ReadFile(filepath.Join(_directory, currentFileName))
+	currentFileFullPath := filepath.Clean(filepath.Join(_directory, currentFileName))
+	readMD, errReadMD := os.ReadFile(currentFileFullPath)
 	ErrorChecker(errReadMD)
 
+	markdown := strings.ReplaceAll(string(readMD), "\r\n", "\n")
 	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
-	regexMatches := regexYML.FindStringSubmatch(string(readMD))
+	regexMatches := regexYML.FindStringSubmatch(markdown)
 
 	errDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
 	ErrorChecker(errDecodeYML)
@@ -51,13 +53,13 @@ func ProcessMarkdown(_reportPath string, _frontmatter FrontmatterYML, _severityA
 
 		processedYML.FindingSeverity = _severityAssessment.CalculatedMatrix[impact][likelihood]
 		currentFileName = processedYML.FindingSeverity + "_" + processedYML.FindingName + ".md"
-		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Join(_directory, currentFileName))
+		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Clean(filepath.Join(_directory, currentFileName)))
 		ErrorChecker(errRename)
 	}
 
 	if strings.Contains(_directory, "suggestions") {
 		currentFileName = "Suggestion_" + processedYML.SuggestionName + ".md"
-		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Join(_directory, currentFileName))
+		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Clean(filepath.Join(_directory, currentFileName)))
 		ErrorChecker(errRename)
 	}
 
