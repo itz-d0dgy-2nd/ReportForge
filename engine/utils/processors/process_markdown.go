@@ -1,6 +1,7 @@
-package Utils
+package processors
 
 import (
+	"ReportForge/engine/utils"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,23 +12,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessMarkdown(_reportPath string, _directory string, _file os.DirEntry, _processedMD *[]Markdown, _frontmatter FrontmatterYML, _severityAssessment SeverityAssessmentYML) []Markdown {
+func ProcessMarkdown(_reportPath string, _directory string, _file os.DirEntry, _processedMD *[]Utils.Markdown, _frontmatter Utils.FrontmatterYML, _severityAssessment Utils.SeverityAssessmentYML) []Utils.Markdown {
 
-	processedYML := MarkdownYML{}
+	processedYML := Utils.MarkdownYML{}
 	impact := -1
 	likelihood := -1
 
 	currentFileName := _file.Name()
 	currentFileFullPath := filepath.Clean(filepath.Join(_directory, currentFileName))
 	readMD, errReadMD := os.ReadFile(currentFileFullPath)
-	ErrorChecker(errReadMD)
+	Utils.ErrorChecker(errReadMD)
 
 	markdown := strings.ReplaceAll(string(readMD), "\r\n", "\n")
 	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
 	regexMatches := regexYML.FindStringSubmatch(markdown)
 
 	errDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
-	ErrorChecker(errDecodeYML)
+	Utils.ErrorChecker(errDecodeYML)
 
 	if strings.Contains(_directory, "findings") {
 
@@ -44,23 +45,23 @@ func ProcessMarkdown(_reportPath string, _directory string, _file os.DirEntry, _
 		}
 
 		if _, validImpact := _severityAssessment.Impacts[impact]; !validImpact {
-			ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", _directory, processedYML.FindingName, processedYML.FindingImpact))
+			Utils.ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", _directory, processedYML.FindingName, processedYML.FindingImpact))
 		}
 
 		if _, validLikelihoods := _severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
-			ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", _directory, processedYML.FindingName, processedYML.FindingLikelihood))
+			Utils.ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", _directory, processedYML.FindingName, processedYML.FindingLikelihood))
 		}
 
 		processedYML.FindingSeverity = _severityAssessment.CalculatedMatrix[impact][likelihood]
 		currentFileName = processedYML.FindingSeverity + "_" + processedYML.FindingName + ".md"
 		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Clean(filepath.Join(_directory, currentFileName)))
-		ErrorChecker(errRename)
+		Utils.ErrorChecker(errRename)
 	}
 
 	if strings.Contains(_directory, "suggestions") {
 		currentFileName = "Suggestion_" + processedYML.SuggestionName + ".md"
 		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Clean(filepath.Join(_directory, currentFileName)))
-		ErrorChecker(errRename)
+		Utils.ErrorChecker(errRename)
 	}
 
 	processedMD := string(blackfriday.Run([]byte(regexMatches[2])))
@@ -95,7 +96,7 @@ func ProcessMarkdown(_reportPath string, _directory string, _file os.DirEntry, _
 		processedMD = strings.ReplaceAll(processedMD, "Screenshots/", _reportPath+"/Screenshots/")
 	}
 
-	*_processedMD = append(*_processedMD, Markdown{
+	*_processedMD = append(*_processedMD, Utils.Markdown{
 		Directory: filepath.Base(_directory),
 		FileName:  strings.TrimSuffix(currentFileName, filepath.Ext(currentFileName)),
 		Headers:   processedYML,

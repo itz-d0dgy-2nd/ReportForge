@@ -1,13 +1,14 @@
-package Utils
+package generators
 
 import (
+	"ReportForge/engine/utils"
 	"os"
 	"text/template"
 )
 
-func GenerateHTML(_frontmatter FrontmatterYML, _severity SeverityAssessmentYML, _summaries []Markdown, _findings []Markdown, _suggestions []Markdown, _appendices []Markdown, _reportTemplatePath string, _HTMLTemplatePath string) {
+func GenerateHTML(_frontmatter Utils.FrontmatterYML, _severity Utils.SeverityAssessmentYML, _summaries []Utils.Markdown, _findings []Utils.Markdown, _suggestions []Utils.Markdown, _appendices []Utils.Markdown, _reportTemplatePath string, _HTMLTemplatePath string) {
 
-	currentProject := Report{
+	currentProject := Utils.Report{
 		Frontmatter: _frontmatter,
 		Severity:    _severity,
 		Summaries:   _summaries,
@@ -18,14 +19,14 @@ func GenerateHTML(_frontmatter FrontmatterYML, _severity SeverityAssessmentYML, 
 	}
 
 	templateHTML, errTemplateHTML := template.ParseFiles(_HTMLTemplatePath)
-	ErrorChecker(errTemplateHTML)
+	Utils.ErrorChecker(errTemplateHTML)
 
 	createHTML, errCreateHTML := os.Create("Report.html")
-	ErrorChecker(errCreateHTML)
+	Utils.ErrorChecker(errCreateHTML)
 
 	defer createHTML.Close()
 
 	errGenerateHTML := templateHTML.Execute(createHTML, currentProject)
-	ErrorChecker(errGenerateHTML)
+	Utils.ErrorChecker(errGenerateHTML)
 
 }

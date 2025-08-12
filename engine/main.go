@@ -1,7 +1,8 @@
 package main
 
 import (
-	Utils "ReportForge/engine/utils"
+	"ReportForge/engine/utils/generators"
+	"ReportForge/engine/utils/handlers"
 	"flag"
 	"path/filepath"
 )
@@ -45,20 +46,20 @@ func main() {
 	// 	   Iterates over directory structure foreach .yml file call ProcessConfigFrontmatter()
 	//     Returns FrontmatterYML, SeverityAssessmentYML
 	//
-	//   - MarkdownFileHandler( SeverityAssessmentYML, string ):
+	//   - SeverityFileHandler( string, SeverityAssessmentYML ):
 	//     Iterates over directory structure foreach .md file call ProcessSeverityMatrix()
 	//	   Returns SeverityAssessmentYML
 	//
-	//   - MarkdownFileHandler( string, FrontmatterYML, SeverityAssessmentYML. string ):
+	//   - MarkdownFileHandler( string, string, FrontmatterYML, SeverityAssessmentYML ):
 	//     Iterates over directory structure foreach .md file call ProcessMarkdown()
 	//     Returns processedMD
 
-	frontmatter, severityAssessment := Utils.ReportConfigFileHandler(reportConfigPath)
-	severity := Utils.SeverityFileHandler(reportFindingsPath, severityAssessment)
-	summaries := Utils.MarkdownFileHandler(reportPath, reportSummariesPath, frontmatter, severityAssessment)
-	findings := Utils.MarkdownFileHandler(reportPath, reportFindingsPath, frontmatter, severityAssessment)
-	suggestions := Utils.MarkdownFileHandler(reportPath, reportSuggestionsPath, frontmatter, severityAssessment)
-	appendices := Utils.MarkdownFileHandler(reportPath, reportAppendicesPath, frontmatter, severityAssessment)
+	frontmatter, severityAssessment := handlers.ReportConfigFileHandler(reportConfigPath)
+	severity := handlers.SeverityFileHandler(reportFindingsPath, severityAssessment)
+	summaries := handlers.MarkdownFileHandler(reportPath, reportSummariesPath, frontmatter, severityAssessment)
+	findings := handlers.MarkdownFileHandler(reportPath, reportFindingsPath, frontmatter, severityAssessment)
+	suggestions := handlers.MarkdownFileHandler(reportPath, reportSuggestionsPath, frontmatter, severityAssessment)
+	appendices := handlers.MarkdownFileHandler(reportPath, reportAppendicesPath, frontmatter, severityAssessment)
 
 	// Execute ReportForge functionality
 	//   - GenerateHTML( FrontmatterYML,  SeverityAssessmentYML, []Markdown, []Markdown, []Markdown, []Markdown,, string, string ):
@@ -70,7 +71,7 @@ func main() {
 	//   - GeneratePDF():
 	//     Create PDF report
 
-	Utils.GenerateHTML(frontmatter, severity, summaries, findings, suggestions, appendices, reportPath, HTMLTemplatePath)
-	Utils.GenerateXSLX(findings, suggestions)
-	Utils.GeneratePDF()
+	generators.GenerateHTML(frontmatter, severity, summaries, findings, suggestions, appendices, reportPath, HTMLTemplatePath)
+	generators.GenerateXSLX(findings, suggestions)
+	generators.GeneratePDF()
 }

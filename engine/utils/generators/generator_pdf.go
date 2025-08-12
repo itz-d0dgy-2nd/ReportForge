@@ -1,6 +1,7 @@
-package Utils
+package generators
 
 import (
+	"ReportForge/engine/utils"
 	"context"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 func ChromePDFPrint(_bytes *[]byte) chromedp.Tasks {
 
 	absPath, ErrAbsPath := filepath.Abs("Report.html")
-	ErrorChecker(ErrAbsPath)
+	Utils.ErrorChecker(ErrAbsPath)
 
 	return chromedp.Tasks{
 
@@ -36,7 +37,7 @@ func ChromePDFPrint(_bytes *[]byte) chromedp.Tasks {
 				WithMarginRight(0).
 				WithPreferCSSPageSize(true).
 				Do(context)
-			ErrorChecker(errPrint)
+			Utils.ErrorChecker(errPrint)
 
 			*_bytes = print
 			return nil
@@ -70,8 +71,8 @@ func GeneratePDF() {
 	browserContext, errBrowserContext := chromedp.NewContext(executionContext)
 	defer errBrowserContext()
 
-	ErrorChecker(chromedp.Run(browserContext, ChromePDFPrint(&bufferPDF)))
-	ErrorChecker(os.WriteFile("Report.pdf", bufferPDF, 0644))
+	Utils.ErrorChecker(chromedp.Run(browserContext, ChromePDFPrint(&bufferPDF)))
+	Utils.ErrorChecker(os.WriteFile("Report.pdf", bufferPDF, 0644))
 	// ErrorChecker(os.Remove("Report.html"))
 
 }

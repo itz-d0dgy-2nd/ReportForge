@@ -1,6 +1,7 @@
-package Utils
+package processors
 
 import (
+	"ReportForge/engine/utils"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,23 +11,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ProcessSeverityMatrix(_directory string, _file os.DirEntry, _severityAssessment *SeverityAssessmentYML) {
+func ProcessSeverityMatrix(_directory string, _file os.DirEntry, _severityAssessment *Utils.SeverityAssessmentYML) {
 
-	processedYML := MarkdownYML{}
+	processedYML := Utils.MarkdownYML{}
 	impact := -1
 	likelihood := -1
 
 	currentFileName := _file.Name()
 	currentFileFullPath := filepath.Clean(filepath.Join(_directory, currentFileName))
 	readMD, errReadMD := os.ReadFile(currentFileFullPath)
-	ErrorChecker(errReadMD)
+	Utils.ErrorChecker(errReadMD)
 
 	markdown := strings.ReplaceAll(string(readMD), "\r\n", "\n")
 	regexYML := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`)
 	regexMatches := regexYML.FindStringSubmatch(markdown)
 
 	errDecodeYML := yaml.Unmarshal([]byte(regexMatches[1]), &processedYML)
-	ErrorChecker(errDecodeYML)
+	Utils.ErrorChecker(errDecodeYML)
 
 	for key, value := range _severityAssessment.Impacts {
 		if value == processedYML.FindingImpact {
@@ -41,11 +42,11 @@ func ProcessSeverityMatrix(_directory string, _file os.DirEntry, _severityAssess
 	}
 
 	if _, validImpact := _severityAssessment.Impacts[impact]; !validImpact {
-		ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", _directory, processedYML.FindingName, processedYML.FindingImpact))
+		Utils.ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", _directory, processedYML.FindingName, processedYML.FindingImpact))
 	}
 
 	if _, validLikelihoods := _severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
-		ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", _directory, processedYML.FindingName, processedYML.FindingLikelihood))
+		Utils.ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", _directory, processedYML.FindingName, processedYML.FindingLikelihood))
 	}
 
 	if _severityAssessment.Matrix[impact][likelihood] == "" {

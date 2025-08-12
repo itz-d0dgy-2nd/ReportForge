@@ -1,13 +1,14 @@
-package Utils
+package generators
 
 import (
+	"ReportForge/engine/utils"
 	"fmt"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/xuri/excelize/v2"
 )
 
-func GenerateXSLX(_findings []Markdown, suggestions []Markdown) {
+func GenerateXSLX(_findings []Utils.Markdown, suggestions []Utils.Markdown) {
 
 	outputXLSX := excelize.NewFile()
 
@@ -39,6 +40,6 @@ func GenerateXSLX(_findings []Markdown, suggestions []Markdown) {
 	}
 
 	outputXLSX.DeleteSheet("Sheet1")
-	ErrorChecker(outputXLSX.SaveAs("Report.xlsx"))
+	Utils.ErrorChecker(outputXLSX.SaveAs("Report.xlsx"))
 
 }

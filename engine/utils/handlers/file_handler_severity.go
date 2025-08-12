@@ -1,6 +1,7 @@
-package Utils
+package handlers
 
 import (
+	"ReportForge/engine/utils"
 	"os"
 	"path/filepath"
 )
@@ -10,14 +11,14 @@ SeverityFileHandler function -> Handles markdown files
 
 	XXX
 */
-func SeverityFileHandler(_directory string, _severityAssessment SeverityAssessmentYML) SeverityAssessmentYML {
+func SeverityFileHandler(_directory string, _severityAssessment Utils.SeverityAssessmentYML) Utils.SeverityAssessmentYML {
 	SeverityRecursiveScan(_directory, &_severityAssessment)
 	return _severityAssessment
 }
 
-func SeverityRecursiveScan(_directory string, _severityAssessment *SeverityAssessmentYML) {
+func SeverityRecursiveScan(_directory string, _severityAssessment *Utils.SeverityAssessmentYML) {
 	readDirectoryContents, errReadDirectoryContents := os.ReadDir(_directory)
-	ErrorChecker(errReadDirectoryContents)
+	Utils.ErrorChecker(errReadDirectoryContents)
 
 	for _, directoryContents := range readDirectoryContents {
 		subdirectory := filepath.Clean(filepath.Join(_directory, directoryContents.Name()))
@@ -26,7 +27,7 @@ func SeverityRecursiveScan(_directory string, _severityAssessment *SeverityAsses
 			SeverityRecursiveScan(subdirectory, _severityAssessment)
 
 		} else if filepath.Ext(directoryContents.Name()) == ".md" {
-			ProcessSeverityMatrix(_directory, directoryContents, _severityAssessment)
+			Utils.ProcessSeverityMatrix(_directory, directoryContents, _severityAssessment)
 
 		}
 	}
