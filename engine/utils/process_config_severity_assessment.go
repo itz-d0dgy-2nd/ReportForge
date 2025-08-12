@@ -16,4 +16,6 @@ func ProcessConfigMatrix(_directory string, _file os.DirEntry, _severityAssessme
 	errDecodeYML := yaml.Unmarshal(readYML, &_severityAssessment)
 	ErrorChecker(errDecodeYML)
 
+	// Add Error Handling for Impacts & Likelihoods
+
 }

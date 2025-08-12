@@ -6,34 +6,28 @@ import (
 )
 
 /*
-FileHandlerSeverity function -> Handles markdown files
+SeverityFileHandler function -> Handles markdown files
 
 	XXX
 */
-func FileHandlerSeverity(_severityAssessment SeverityAssessmentYML, _directory string) SeverityAssessmentYML {
+func SeverityFileHandler(_directory string, _severityAssessment SeverityAssessmentYML) SeverityAssessmentYML {
+	SeverityRecursiveScan(_directory, &_severityAssessment)
+	return _severityAssessment
+}
 
+func SeverityRecursiveScan(_directory string, _severityAssessment *SeverityAssessmentYML) {
 	readDirectoryContents, errReadDirectoryContents := os.ReadDir(_directory)
 	ErrorChecker(errReadDirectoryContents)
 
 	for _, directoryContents := range readDirectoryContents {
+		subdirectory := filepath.Clean(filepath.Join(_directory, directoryContents.Name()))
+
 		if directoryContents.IsDir() {
-			subdirectory := filepath.Clean(filepath.Join(_directory, directoryContents.Name()))
-			readFiles, errReadFiles := os.ReadDir(subdirectory)
-			ErrorChecker(errReadFiles)
+			SeverityRecursiveScan(subdirectory, _severityAssessment)
 
-			for _, subdirectoryContents := range readFiles {
-				if filepath.Ext(subdirectoryContents.Name()) == ".md" {
-					ProcessSeverityMatrix(subdirectory, subdirectoryContents, &_severityAssessment)
-				}
-			}
+		} else if filepath.Ext(directoryContents.Name()) == ".md" {
+			ProcessSeverityMatrix(_directory, directoryContents, _severityAssessment)
 
-		} else if !directoryContents.IsDir() {
-			if filepath.Ext(directoryContents.Name()) == ".md" {
-				ProcessSeverityMatrix(_directory, directoryContents, &_severityAssessment)
-			}
 		}
 	}
-
-	return _severityAssessment
-
 }

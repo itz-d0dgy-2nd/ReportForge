@@ -60,15 +60,15 @@ func GeneratePDF() {
 
 	if os.Getenv("ACTION") == "true" {
 		execAllocatorOpts = append(execAllocatorOpts,
-			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("no-sandbox", true), // This needs to be set due to either the restricted namespaces or apparmour in GitHub actions.
 		)
 	}
 
-	executionContext, ErrExecutionContext := chromedp.NewExecAllocator(context.Background(), execAllocatorOpts...)
-	defer ErrExecutionContext()
+	executionContext, errExecutionContext := chromedp.NewExecAllocator(context.Background(), execAllocatorOpts...)
+	defer errExecutionContext()
 
-	browserContext, ErrBrowserContext := chromedp.NewContext(executionContext)
-	defer ErrBrowserContext()
+	browserContext, errBrowserContext := chromedp.NewContext(executionContext)
+	defer errBrowserContext()
 
 	ErrorChecker(chromedp.Run(browserContext, ChromePDFPrint(&bufferPDF)))
 	ErrorChecker(os.WriteFile("Report.pdf", bufferPDF, 0644))

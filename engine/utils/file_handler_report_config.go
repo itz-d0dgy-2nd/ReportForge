@@ -7,47 +7,36 @@ import (
 )
 
 /*
-FileHandlerReportConfig function -> Handles yml files
+ReportConfigFileHandler function -> Handles yml files
 
 	XXX
 */
-func FileHandlerReportConfig(_directory string) (FrontmatterYML, SeverityAssessmentYML) {
-
+func ReportConfigFileHandler(_directory string) (FrontmatterYML, SeverityAssessmentYML) {
 	processedYML := FrontmatterYML{}
 	processedSeverityAssessment := SeverityAssessmentYML{}
+	ReportConfigRecursiveScan(_directory, &processedYML, &processedSeverityAssessment)
+	return processedYML, processedSeverityAssessment
+}
 
+func ReportConfigRecursiveScan(_directory string, processedYML *FrontmatterYML, processedSeverityAssessment *SeverityAssessmentYML) {
 	readDirectoryContents, errReadDirectoryContents := os.ReadDir(_directory)
 	ErrorChecker(errReadDirectoryContents)
 
 	for _, directoryContents := range readDirectoryContents {
+		subdirectory := filepath.Clean(filepath.Join(_directory, directoryContents.Name()))
+
 		if directoryContents.IsDir() {
-			subdirectory := filepath.Clean(filepath.Join(_directory, directoryContents.Name()))
-			readFiles, errReadFiles := os.ReadDir(subdirectory)
-			ErrorChecker(errReadFiles)
+			ReportConfigRecursiveScan(subdirectory, processedYML, processedSeverityAssessment)
 
-			for _, subdirectoryContents := range readFiles {
-				if filepath.Ext(subdirectoryContents.Name()) == ".yml" {
-					if strings.Contains(subdirectoryContents.Name(), "front_matter") {
-						ProcessConfigFrontmatter(subdirectory, subdirectoryContents, &processedYML)
-					}
-					if strings.Contains(subdirectoryContents.Name(), "severity_assessment") {
-						ProcessConfigMatrix(subdirectory, subdirectoryContents, &processedSeverityAssessment)
-					}
-				}
+		} else if filepath.Ext(directoryContents.Name()) == ".yml" {
+			if strings.Contains(directoryContents.Name(), "front_matter") {
+				ProcessConfigFrontmatter(_directory, directoryContents, processedYML)
+
 			}
+			if strings.Contains(directoryContents.Name(), "severity_assessment") {
+				ProcessConfigMatrix(_directory, directoryContents, processedSeverityAssessment)
 
-		} else if !directoryContents.IsDir() {
-			if filepath.Ext(directoryContents.Name()) == ".yml" {
-				if strings.Contains(directoryContents.Name(), "front_matter") {
-					ProcessConfigFrontmatter(_directory, directoryContents, &processedYML)
-				}
-				if strings.Contains(directoryContents.Name(), "severity_assessment") {
-					ProcessConfigMatrix(_directory, directoryContents, &processedSeverityAssessment)
-				}
 			}
 		}
 	}
-
-	return processedYML, processedSeverityAssessment
-
 }
