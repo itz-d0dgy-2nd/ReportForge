@@ -38,8 +38,6 @@ func ReportConfigRecursiveScan(_directory string, processedYML *Utils.Frontmatte
 
 /*
 ReportConfigFileHandler → Handles yaml files
-  - Reads directory structure
-  - Filters for .yml files
   - Calls ReportConfigRecursiveScan() → processors.ProcessConfigMatrix()
   - Returns processed yaml of type Utils.FrontmatterYML{} & Utils.SeverityAssessmentYML{}
 */
