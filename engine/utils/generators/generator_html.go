@@ -6,19 +6,8 @@ import (
 	"text/template"
 )
 
-func GenerateHTML(_frontmatter Utils.FrontmatterYML, _severity Utils.SeverityAssessmentYML, _summaries []Utils.Markdown, _findings []Utils.Markdown, _suggestions []Utils.Markdown, _appendices []Utils.Markdown, _reportTemplatePath string, _HTMLTemplatePath string) {
-
-	currentProject := Utils.Report{
-		Frontmatter: _frontmatter,
-		Severity:    _severity,
-		Summaries:   _summaries,
-		Findings:    _findings,
-		Suggestions: _suggestions,
-		Appendices:  _appendices,
-		Path:        _reportTemplatePath,
-	}
-
-	templateHTML, errTemplateHTML := template.ParseFiles(_HTMLTemplatePath)
+func GenerateHTML(_reportData Utils.ReportDataStruct, _reportPaths Utils.ReportPathsStruct) {
+	templateHTML, errTemplateHTML := template.ParseFiles(_reportPaths.TemplatePath)
 	Utils.ErrorChecker(errTemplateHTML)
 
 	createHTML, errCreateHTML := os.Create("Report.html")
@@ -26,7 +15,6 @@ func GenerateHTML(_frontmatter Utils.FrontmatterYML, _severity Utils.SeverityAss
 
 	defer createHTML.Close()
 
-	errGenerateHTML := templateHTML.Execute(createHTML, currentProject)
+	errGenerateHTML := templateHTML.Execute(createHTML, _reportData)
 	Utils.ErrorChecker(errGenerateHTML)
-
 }

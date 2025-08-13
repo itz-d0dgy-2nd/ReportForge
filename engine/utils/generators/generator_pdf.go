@@ -11,14 +11,12 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func ChromePDFPrint(_bytes *[]byte) chromedp.Tasks {
-
-	absPath, ErrAbsPath := filepath.Abs("Report.html")
-	Utils.ErrorChecker(ErrAbsPath)
-
+func SetupChromiumPrint(_PDFBuffer *[]byte, _reportPaths Utils.ReportPathsStruct) chromedp.Tasks {
+	absoluteFilePath, errAbsoluteFilePath := filepath.Abs(filepath.Join("Report.html"))
+	Utils.ErrorChecker(errAbsoluteFilePath)
 	return chromedp.Tasks{
 
-		chromedp.Navigate("file:///" + absPath),
+		chromedp.Navigate("file:///" + absoluteFilePath),
 		chromedp.ActionFunc(func(context context.Context) error {
 
 			// NOTE:
@@ -39,40 +37,38 @@ func ChromePDFPrint(_bytes *[]byte) chromedp.Tasks {
 				Do(context)
 			Utils.ErrorChecker(errPrint)
 
-			*_bytes = print
+			*_PDFBuffer = print
 			return nil
 
 		}),
 	}
 }
 
-func GeneratePDF() {
-
-	bufferPDF := []byte{}
-	execAllocatorOpts := []chromedp.ExecAllocatorOption{}
-
-	execAllocatorOpts = append(execAllocatorOpts, chromedp.Flag("headless", true))
+func SetupChromiumBrowser() []chromedp.ExecAllocatorOption {
+	chromiumExecutionOptions := []chromedp.ExecAllocatorOption{}
+	chromiumExecutionOptions = append(chromiumExecutionOptions, chromedp.Flag("headless", true))
 
 	if runtime.GOOS == "windows" {
-		execAllocatorOpts = append(execAllocatorOpts,
-			chromedp.ExecPath(`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`),
-		)
+		chromiumExecutionOptions = append(chromiumExecutionOptions, chromedp.ExecPath(`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`))
 	}
-
 	if os.Getenv("ACTION") == "true" {
-		execAllocatorOpts = append(execAllocatorOpts,
-			chromedp.Flag("no-sandbox", true), // This needs to be set due to either the restricted namespaces or apparmour in GitHub actions.
-		)
+		chromiumExecutionOptions = append(chromiumExecutionOptions, chromedp.Flag("no-sandbox", true))
+		// This needs to be set due to either the restricted namespaces or apparmour in GitHub actions.
 	}
+	return chromiumExecutionOptions
+}
 
-	executionContext, errExecutionContext := chromedp.NewExecAllocator(context.Background(), execAllocatorOpts...)
-	defer errExecutionContext()
+func GeneratePDF(_reportPaths Utils.ReportPathsStruct) {
 
-	browserContext, errBrowserContext := chromedp.NewContext(executionContext)
-	defer errBrowserContext()
+	PDFBuffer := []byte{}
+	chromiumExecutionOptions := SetupChromiumBrowser()
 
-	Utils.ErrorChecker(chromedp.Run(browserContext, ChromePDFPrint(&bufferPDF)))
-	Utils.ErrorChecker(os.WriteFile("Report.pdf", bufferPDF, 0644))
-	// ErrorChecker(os.Remove("Report.html"))
+	chromiumExecutionContext, errChromiumExecutionContext := chromedp.NewExecAllocator(context.Background(), chromiumExecutionOptions...)
+	defer errChromiumExecutionContext()
 
+	chromiumBrowserContext, errChromiumBrowserContext := chromedp.NewContext(chromiumExecutionContext)
+	defer errChromiumBrowserContext()
+
+	Utils.ErrorChecker(chromedp.Run(chromiumBrowserContext, SetupChromiumPrint(&PDFBuffer, _reportPaths)))
+	Utils.ErrorChecker(os.WriteFile(filepath.Join("Report.pdf"), PDFBuffer, 0o777))
 }
