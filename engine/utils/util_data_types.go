@@ -1,5 +1,37 @@
 package Utils
 
+type ArgumentsStruct struct {
+	DevelopmentMode bool
+	CustomMode      string
+}
+
+type ReportPathsStruct struct {
+	RootPath        string
+	ConfigPath      string
+	TemplatePath    string
+	SummariesPath   string
+	FindingsPath    string
+	SuggestionsPath string
+	AppendicesPath  string
+}
+
+type Markdown struct {
+	Directory string
+	FileName  string
+	Headers   MarkdownYML
+	Body      string
+}
+
+type ReportDataStruct struct {
+	Frontmatter FrontmatterYML
+	Severity    SeverityAssessmentYML
+	Summaries   []Markdown
+	Findings    []Markdown
+	Suggestions []Markdown
+	Appendices  []Markdown
+	Path        string
+}
+
 type FrontmatterYML struct {
 	Client              string            `yaml:"Client"`
 	TargetInformation   map[string]string `yaml:"TargetInformation"`
@@ -40,21 +72,4 @@ type MarkdownYML struct {
 	AppendixStatus           string `yaml:"AppendixStatus"`
 	AppendixAuthor           string `yaml:"AppendixAuthor"`
 	AppendixReviewers        string `yaml:"AppendixReviewers"`
-}
-
-type Markdown struct {
-	Directory string
-	FileName  string
-	Headers   MarkdownYML
-	Body      string
-}
-
-type Report struct {
-	Frontmatter FrontmatterYML
-	Severity    SeverityAssessmentYML
-	Summaries   []Markdown
-	Findings    []Markdown
-	Suggestions []Markdown
-	Appendices  []Markdown
-	Path        string
 }
