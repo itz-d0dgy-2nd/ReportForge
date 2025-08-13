@@ -12,6 +12,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+/*
+ProcessMarkdown → Processes markdown files
+*/
 func ProcessMarkdown(_reportPath string, _directory string, _file os.DirEntry, _processedMD *[]Utils.Markdown, _frontmatter Utils.FrontmatterYML, _severityAssessment Utils.SeverityAssessmentYML) []Utils.Markdown {
 
 	processedYML := Utils.MarkdownYML{}

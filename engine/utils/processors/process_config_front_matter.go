@@ -9,6 +9,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+/*
+ProcessConfigFrontmatter → Process yaml files
+  - Reads yaml configuration file
+  - Unmarshals yaml content into type *Utils.FrontmatterYML
+  - Validate _frontmatter.DocumentInformation
+  - Updates frontmatter pointer with processed data
+*/
 func ProcessConfigFrontmatter(_directory string, _file os.DirEntry, _frontmatter *Utils.FrontmatterYML) {
 
 	currentFileName := _file.Name()
