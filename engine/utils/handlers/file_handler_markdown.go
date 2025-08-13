@@ -31,8 +31,6 @@ func MarkdownRecursiveScan(_reportPath, _directory string, processedMD *[]Utils.
 
 /*
 MarkdownFileHandler → Handles markdown files
-  - Reads directory structure
-  - Filters for .md files
   - Calls MarkdownRecursiveScan() → processors.ProcessMarkdown()
   - Returns processed markdown of type []Utils.Markdown{}
 */
