@@ -32,7 +32,7 @@ func SeverityRecursiveScan(_directory string, _severityAssessment *Utils.Severit
 /*
 SeverityFileHandler → Handles markdown files
   - Reads directory structure
-  - Filters for .yml files
+  - Filters for .nd files
   - Calls SeverityRecursiveScan() → processors.ProcessSeverityMatrix()
   - Returns processed yaml of type Utils.SeverityAssessmentYML
 */
