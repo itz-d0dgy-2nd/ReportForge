@@ -1,77 +1,92 @@
 package main
 
 import (
+	Utils "ReportForge/engine/utils"
 	"ReportForge/engine/utils/generators"
 	"ReportForge/engine/utils/handlers"
 	"flag"
 	"path/filepath"
 )
 
-/*
-Main function -> Sets up ReportForge:
-  - Configures arguments
-  - Configures operating specific file paths
-  - Executes file handlers
-  - Generates reports
-*/
-func main() {
+func SetupArgumentParser() Utils.ArgumentsStruct {
 
-	// Create an argument parser:
-	//   - Flag ( `--dev` ):
-	//     Account for the nested report directory due to git submodule
+	// Configure an argument parser:
+	//   - Flag ( `--developmentMode` ): Account for the nested report directory due to git submodule
+	//   - Flag ( `--customPath` ): Account for a custom report directory
 
-	devMode := flag.Bool("dev", false, "Run in development mode")
+	argumentsProvided := Utils.ArgumentsStruct{}
+	flag.BoolVar(&argumentsProvided.DevelopmentMode, "developmentMode", false, "Run in development mode")
+	flag.StringVar(&argumentsProvided.CustomMode, "customPath", "report", "Custom Path")
 	flag.Parse()
+	return argumentsProvided
+}
 
-	// Create operating system specific file paths:
-	//   - Linux/MacOS:
-	//     report/
-	//
-	//   - Windows:
-	//     report\
+func SetupReportPaths(_argumentsProvided Utils.ArgumentsStruct) Utils.ReportPathsStruct {
 
-	reportPath := filepath.Clean(filepath.Join("report"))
-	if *devMode {
-		reportPath = filepath.Clean(filepath.Join(reportPath, "report"))
+	// Configure report paths:
+	//   - RootPath: The report file path (Default: report/* || report\*)
+	//   - ConfigPath: The report yaml files path (Default: report/0_report_config/* || report\0_report_config\*)
+	//   - TemplatePath: The report template file path (Default: report/0_report_template/* || report\0_report_template\*)
+	//   - SummariesPath: The report markdown files path (Default: report/1_summaries/* || report\1_summaries\*)
+	//   - FindingsPath: The report markdown files path (Default: report/2_findings/* || report\2_findings\*)
+	//   - SuggestionsPath: The report markdown files path (Default: report/3_suggestions/* || report\3_suggestions\*)
+	//   - AppendicesPath: The report markdown files path (Default: report/4_appendices/* || report\4_appendices\*)
+
+	rootPath := _argumentsProvided.CustomMode
+	if _argumentsProvided.DevelopmentMode {
+		rootPath = filepath.Clean(filepath.Join(rootPath, "report"))
 	}
-	reportConfigPath := filepath.Clean(filepath.Join(reportPath, "0_report_config"))
-	reportSummariesPath := filepath.Clean(filepath.Join(reportPath, "1_summaries"))
-	reportFindingsPath := filepath.Clean(filepath.Join(reportPath, "2_findings"))
-	reportSuggestionsPath := filepath.Clean(filepath.Join(reportPath, "3_suggestions"))
-	reportAppendicesPath := filepath.Clean(filepath.Join(reportPath, "4_appendices"))
-	HTMLTemplatePath := filepath.Clean(filepath.Join(reportPath, "0_report_template", "html", "template.html"))
+	return Utils.ReportPathsStruct{
+		RootPath:        rootPath,
+		ConfigPath:      filepath.Clean(filepath.Join(rootPath, "0_report_config")),
+		TemplatePath:    filepath.Clean(filepath.Join(rootPath, "0_report_template", "html", "template.html")),
+		SummariesPath:   filepath.Clean(filepath.Join(rootPath, "1_summaries")),
+		FindingsPath:    filepath.Clean(filepath.Join(rootPath, "2_findings")),
+		SuggestionsPath: filepath.Clean(filepath.Join(rootPath, "3_suggestions")),
+		AppendicesPath:  filepath.Clean(filepath.Join(rootPath, "4_appendices")),
+	}
+}
 
-	// Execute ReportForge functionality
-	//   - ReportConfigFileHandler( string ):
-	// 	   Iterates over directory structure foreach .yml file call ProcessConfigFrontmatter()
-	//     Returns FrontmatterYML, SeverityAssessmentYML
-	//
-	//   - SeverityFileHandler( string, SeverityAssessmentYML ):
-	//     Iterates over directory structure foreach .md file call ProcessSeverityMatrix()
-	//	   Returns SeverityAssessmentYML
-	//
-	//   - MarkdownFileHandler( string, string, FrontmatterYML, SeverityAssessmentYML ):
-	//     Iterates over directory structure foreach .md file call ProcessMarkdown()
-	//     Returns processedMD
+func SetupReportData(_reportPaths Utils.ReportPathsStruct) Utils.ReportDataStruct {
 
-	frontmatter, severityAssessment := handlers.ReportConfigFileHandler(reportConfigPath)
-	severity := handlers.SeverityFileHandler(reportFindingsPath, severityAssessment)
-	summaries := handlers.MarkdownFileHandler(reportPath, reportSummariesPath, frontmatter, severityAssessment)
-	findings := handlers.MarkdownFileHandler(reportPath, reportFindingsPath, frontmatter, severityAssessment)
-	suggestions := handlers.MarkdownFileHandler(reportPath, reportSuggestionsPath, frontmatter, severityAssessment)
-	appendices := handlers.MarkdownFileHandler(reportPath, reportAppendicesPath, frontmatter, severityAssessment)
+	// Execute ReportForge functionality:
+	//   - Frontmatter: Recursively iterates over directory structure foreach .yml and process the content
+	//   - Severity: Recursively iterates over directory structure foreach .md and process the severities
+	//   - Summaries: Recursively iterates over directory structure foreach .md and process the executive and technical summaries
+	//   - Findings: Recursively iterates over directory structure foreach .md and process the findings
+	//   - Suggestions: Recursively iterates over directory structure foreach .md and process the suggestions
+	//   - Appendices: Recursively iterates over directory structure foreach .md and process the appendices
+	//   - Path: The report file path, used for HTML `href=` and `src=`
 
-	// Execute ReportForge functionality
-	//   - GenerateHTML( FrontmatterYML,  SeverityAssessmentYML, []Markdown, []Markdown, []Markdown, []Markdown,, string, string ):
-	//     Create HTML report
-	//
-	//   - GenerateXSLX( []Markdown, []Markdown ):
-	//     Create XSLX report
-	//
-	//   - GeneratePDF():
-	//     Create PDF report
+	frontmatter, severityAssessment := handlers.ReportConfigFileHandler(_reportPaths.RootPath)
 
-	generators.GenerateHTML(frontmatter, severity, summaries, findings, suggestions, appendices, reportPath, HTMLTemplatePath)
-	generators.GenerateXSLX(findings, suggestions)
-	generators.GeneratePDF()
+	return Utils.ReportDataStruct{
+		Frontmatter: frontmatter,
+		Severity:    handlers.SeverityFileHandler(_reportPaths.FindingsPath, severityAssessment),
+		Summaries:   handlers.MarkdownFileHandler(_reportPaths.RootPath, _reportPaths.SummariesPath, frontmatter, severityAssessment),
+		Findings:    handlers.MarkdownFileHandler(_reportPaths.RootPath, _reportPaths.FindingsPath, frontmatter, severityAssessment),
+		Suggestions: handlers.MarkdownFileHandler(_reportPaths.RootPath, _reportPaths.SuggestionsPath, frontmatter, severityAssessment),
+		Appendices:  handlers.MarkdownFileHandler(_reportPaths.RootPath, _reportPaths.AppendicesPath, frontmatter, severityAssessment),
+		Path:        _reportPaths.RootPath,
+	}
+}
+
+func reportGeneration(_reportData Utils.ReportDataStruct, _reportPaths Utils.ReportPathsStruct) {
+
+	// Execute ReportForge functionality:
+	//   - GenerateHTML(): Create HTML report
+	//   - GeneratePDF(): Create PDF report
+	//   - GenerateXSLX(): Create XSLX report
+
+	generators.GenerateHTML(_reportData, _reportPaths)
+	generators.GeneratePDF(_reportPaths)
+	generators.GenerateXSLX(_reportData.Findings, _reportData.Suggestions)
+
+}
+
+func main() {
+	argumentsParsed := SetupArgumentParser()
+	reportPaths := SetupReportPaths(argumentsParsed)
+	reportData := SetupReportData(reportPaths)
+	reportGeneration(reportData, reportPaths)
 }
