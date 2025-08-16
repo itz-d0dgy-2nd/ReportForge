@@ -43,10 +43,11 @@ type FrontmatterYML struct {
 }
 
 type SeverityAssessmentYML struct {
-	Impacts          map[int]string `yaml:"Impacts"`
-	Likelihoods      map[int]string `yaml:"Likelihoods"`
-	Matrix           [5][5]string   `yaml:"Matrix"`
-	CalculatedMatrix [5][5]string   `yaml:"CalculatedMatrix"`
+	SeverityAssessmentEnabled bool           `yaml:"SeverityAssessmentEnabled"`
+	Impacts                   map[int]string `yaml:"Impacts"`
+	Likelihoods               map[int]string `yaml:"Likelihoods"`
+	Matrix                    [5][5]string   `yaml:"Matrix"`
+	CalculatedMatrix          [5][5]string   `yaml:"CalculatedMatrix"`
 }
 
 type MarkdownYML struct {

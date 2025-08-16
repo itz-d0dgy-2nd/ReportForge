@@ -25,6 +25,10 @@ func ProcessConfigMatrix(_directory string, _file os.DirEntry, _severityAssessme
 	errDecodeYML := yaml.Unmarshal(readYML, &_severityAssessment)
 	Utils.ErrorChecker(errDecodeYML)
 
+	if !_severityAssessment.SeverityAssessmentEnabled {
+		return
+	}
+
 	for _, impact := range _severityAssessment.Impacts {
 		if impact == "" {
 			Utils.ErrorChecker(fmt.Errorf("invalid impact in severity_config (%s/%s - %v) - please check that your impact is not nil", _directory, currentFileName, nil))

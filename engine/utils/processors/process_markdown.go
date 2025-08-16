@@ -35,27 +35,28 @@ func ProcessMarkdown(_reportPath string, _directory string, _file os.DirEntry, _
 
 	if strings.Contains(_directory, "findings") {
 
-		for key, value := range _severityAssessment.Impacts {
-			if value == processedYML.FindingImpact {
-				impact = key
+		if !_severityAssessment.SeverityAssessmentEnabled {
+			if processedYML.FindingSeverity == "" {
+				Utils.ErrorChecker(fmt.Errorf("invalid severity in finding (%s/%s - %s) - please check that your severity is not nil", _directory, processedYML.FindingName, processedYML.FindingSeverity))
 			}
+
 		}
 
-		for key, value := range _severityAssessment.Likelihoods {
-			if value == processedYML.FindingLikelihood {
-				likelihood = key
+		if _severityAssessment.SeverityAssessmentEnabled {
+			for key, value := range _severityAssessment.Impacts {
+				if value == processedYML.FindingImpact {
+					impact = key
+				}
 			}
+
+			for key, value := range _severityAssessment.Likelihoods {
+				if value == processedYML.FindingLikelihood {
+					likelihood = key
+				}
+			}
+			processedYML.FindingSeverity = _severityAssessment.CalculatedMatrix[impact][likelihood]
 		}
 
-		if _, validImpact := _severityAssessment.Impacts[impact]; !validImpact {
-			Utils.ErrorChecker(fmt.Errorf("invalid impact in finding (%s/%s - %s) - please check that your impact is supported", _directory, processedYML.FindingName, processedYML.FindingImpact))
-		}
-
-		if _, validLikelihoods := _severityAssessment.Likelihoods[likelihood]; !validLikelihoods {
-			Utils.ErrorChecker(fmt.Errorf("invalid likelihood in finding (%s/%s - %s) - please check that your likelihood is supported", _directory, processedYML.FindingName, processedYML.FindingLikelihood))
-		}
-
-		processedYML.FindingSeverity = _severityAssessment.CalculatedMatrix[impact][likelihood]
 		currentFileName = processedYML.FindingSeverity + "_" + processedYML.FindingName + ".md"
 		errRename := os.Rename(filepath.Join(_directory, _file.Name()), filepath.Clean(filepath.Join(_directory, currentFileName)))
 		Utils.ErrorChecker(errRename)

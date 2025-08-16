@@ -35,6 +35,9 @@ SeverityFileHandler → Handles markdown files
   - Returns processed yaml of type Utils.SeverityAssessmentYML
 */
 func SeverityFileHandler(_directory string, _severityAssessment Utils.SeverityAssessmentYML) Utils.SeverityAssessmentYML {
+	if !_severityAssessment.SeverityAssessmentEnabled {
+		return _severityAssessment
+	}
 	SeverityRecursiveScan(_directory, &_severityAssessment)
 	return _severityAssessment
 }
