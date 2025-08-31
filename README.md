@@ -9,5 +9,5 @@
 > If you're familiar with Go and have suggestions for better practices or optimisations, please feel free to open a pull request! I'm always happy to improve the project and welcome contributions.
 
 For detailed information on this project, please read the [wiki](https://github.com/itz-d0dgy-2nd/ReportForge/wiki)  
-For roadman on this project, please click here: [wiki - roadmap](https://github.com/itz-d0dgy-2nd/ReportForge/wiki/1.-Project-%E2%80%90-Roadmap)
+For roadman on this project, please read the [Project Roadmap](https://github.com/users/itz-d0dgy-2nd/projects/3)
 
