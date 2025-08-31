@@ -13,7 +13,7 @@ func ErrorChecker(_ErrAny error) {
 		if errors.Is(_ErrAny, fs.ErrNotExist) {
 			fmt.Printf("::Log:: %s ", _ErrAny.Error())
 		} else {
-			fmt.Printf("::Error:: An error occurred: %s \n", _ErrAny.Error())
+			fmt.Printf("::Error:: %s \n", _ErrAny.Error())
 			os.Exit(1)
 		}
 	}

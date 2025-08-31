@@ -23,7 +23,7 @@ type Markdown struct {
 }
 
 type ReportDataStruct struct {
-	Frontmatter FrontmatterYML
+	Metadata    MetadataYML
 	Severity    SeverityAssessmentYML
 	Summaries   []Markdown
 	Findings    []Markdown
@@ -32,21 +32,23 @@ type ReportDataStruct struct {
 	Path        string
 }
 
-type FrontmatterYML struct {
+type MetadataYML struct {
 	Client              string            `yaml:"Client"`
 	TargetInformation   map[string]string `yaml:"TargetInformation"`
 	DocumentInformation []struct {
-		DocumentCurrent  bool              `yaml:"DocumentCurrent"`
-		DocumentMetadata map[string]string `yaml:"DocumentMetadata"`
+		DocumentCurrent    bool              `yaml:"DocumentCurrent"`
+		DocumentVersioning map[string]string `yaml:"DocumentVersioning"`
 	} `yaml:"DocumentInformation"`
 	StakeholderInformation []map[string]any `yaml:"StakeholderInformation"`
 }
 
 type SeverityAssessmentYML struct {
-	Impacts          map[int]string `yaml:"Impacts"`
-	Likelihoods      map[int]string `yaml:"Likelihoods"`
-	Matrix           [5][5]string   `yaml:"Matrix"`
-	CalculatedMatrix [5][5]string   `yaml:"CalculatedMatrix"`
+	ConductSeverityAssessment bool              `yaml:"ConductSeverityAssessment"`
+	Impacts                   []string          `yaml:"Impacts"`
+	Likelihoods               []string          `yaml:"Likelihoods"`
+	Scales                    map[string]string `yaml:"Scales"`
+	CalculatedMatrix          [5][5]string      `yaml:"CalculatedMatrix"`
+	Matrix                    [5][5]string      `yaml:"Matrix"`
 }
 
 type MarkdownYML struct {
