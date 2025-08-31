@@ -4,3 +4,4 @@ go.mod
 go.sum
 
 .idea/**
+Temp/*.go
