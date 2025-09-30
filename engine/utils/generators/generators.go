@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"text/template"
 
 	"github.com/chromedp/cdproto/page"
@@ -23,20 +22,6 @@ GenerateHTML → Generate final HTML report from processed report data
   - Handles errors via Utils.ErrorChecker()
 */
 func GenerateHTML(_reportData Utils.ReportDataStruct, _reportPaths Utils.ReportPathsStruct) {
-
-	sort.Slice(_reportData.Findings, func(i, j int) bool {
-		if _reportData.Findings[i].Directory != _reportData.Findings[j].Directory {
-			return _reportData.Findings[i].Directory < _reportData.Findings[j].Directory
-		}
-		return _reportData.Findings[i].FileName < _reportData.Findings[j].FileName
-	})
-
-	sort.Slice(_reportData.Suggestions, func(i, j int) bool {
-		if _reportData.Suggestions[i].Directory != _reportData.Suggestions[j].Directory {
-			return _reportData.Suggestions[i].Directory < _reportData.Suggestions[j].Directory
-		}
-		return _reportData.Suggestions[i].FileName < _reportData.Suggestions[j].FileName
-	})
 
 	templateHTML, errTemplateHTML := template.ParseFiles(_reportPaths.TemplatePath)
 	Utils.ErrorChecker(errTemplateHTML)
@@ -129,11 +114,11 @@ GenerateXLSX → Generate final XLSX spreadsheet report from processed report da
   - Removes default "Sheet1" and saves as "Report.xlsx"
   - Handles errors via Utils.ErrorChecker()
 */
-func GenerateXLSX(_findings []Utils.Markdown, suggestions []Utils.Markdown) {
+func GenerateXLSX(_reportData Utils.ReportDataStruct) {
 	outputSpreadsheet := excelize.NewFile()
 	sanitiser := bluemonday.StrictPolicy()
 
-	for _, finding := range _findings {
+	for _, finding := range _reportData.Findings {
 		sheetName := finding.Directory
 
 		if len(sheetName) > 31 {
