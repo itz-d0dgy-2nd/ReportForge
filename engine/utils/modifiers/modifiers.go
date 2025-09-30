@@ -21,26 +21,27 @@ ModifySeverity → Updates the FindingSeverity YAML feild in markdown files base
   - For "3_suggestions" files → updates filename
 */
 func ModifySeverity(_filePath string, _severityAssessment Utils.SeverityAssessmentYML) {
-	if _severityAssessment.ConductSeverityAssessment {
-		newFileName := ""
-		fileModified := false
-		unprocessedYaml := Utils.MarkdownYML{}
+	newFileName := ""
+	fileModified := false
+	unprocessedYaml := Utils.MarkdownYML{}
 
-		readMarkdownFile, errReadMarkdown := os.ReadFile(_filePath)
-		Utils.ErrorChecker(errReadMarkdown)
+	readMarkdownFile, errReadMarkdown := os.ReadFile(_filePath)
+	Utils.ErrorChecker(errReadMarkdown)
 
-		rawMarkdownContent := strings.ReplaceAll(string(readMarkdownFile), "\r\n", "\n")
-		regexMatches := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`).FindStringSubmatch(rawMarkdownContent)
+	rawMarkdownContent := strings.ReplaceAll(string(readMarkdownFile), "\r\n", "\n")
+	regexMatches := regexp.MustCompile(`(?s)^---\n(.*?)\n---\n(.*)`).FindStringSubmatch(rawMarkdownContent)
 
-		if len(regexMatches) < 2 {
-			Utils.ErrorChecker(fmt.Errorf("missing YAML frontmatter in ( %s )", _filePath))
-		}
+	if len(regexMatches) < 2 {
+		Utils.ErrorChecker(fmt.Errorf("missing YAML frontmatter in ( %s )", _filePath))
+	}
 
-		if yaml.Unmarshal([]byte(regexMatches[1]), &unprocessedYaml) != nil {
-			Utils.ErrorChecker(fmt.Errorf("invalid YAML frontmatter in ( %s )", _filePath))
-		}
+	if yaml.Unmarshal([]byte(regexMatches[1]), &unprocessedYaml) != nil {
+		Utils.ErrorChecker(fmt.Errorf("invalid YAML frontmatter in ( %s )", _filePath))
+	}
 
-		if strings.Contains(_filePath, "2_findings") {
+	if strings.Contains(_filePath, "2_findings") {
+		if _severityAssessment.ConductSeverityAssessment {
+
 			impactIndex := slices.Index(_severityAssessment.Impacts, unprocessedYaml.FindingImpact)
 			likelihoodIndex := slices.Index(_severityAssessment.Likelihoods, unprocessedYaml.FindingLikelihood)
 
@@ -53,17 +54,23 @@ func ModifySeverity(_filePath string, _severityAssessment Utils.SeverityAssessme
 				rawMarkdownContent = strings.Replace(rawMarkdownContent, "FindingSeverity: "+unprocessedYaml.FindingSeverity, "FindingSeverity: "+_severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex], 1)
 				newFileName = _severityAssessment.Scales[_severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]] + "_" + unprocessedYaml.FindingName + ".md"
 			}
-		}
 
-		if strings.Contains(_filePath, "3_suggestions") {
-			fileModified = true
-			newFileName = "5_" + unprocessedYaml.SuggestionName + ".md"
-		}
+		} else if !_severityAssessment.ConductSeverityAssessment {
 
-		if fileModified {
-			Utils.ErrorChecker(os.WriteFile(_filePath, []byte(rawMarkdownContent), 0644))
-			Utils.ErrorChecker(os.Rename(_filePath, filepath.Clean(filepath.Join(filepath.Dir(_filePath), newFileName))))
+			if unprocessedYaml.FindingSeverity == "" {
+				Utils.ErrorChecker(fmt.Errorf("invalid severity found in '%s'", _filePath))
+			}
 		}
+	}
+
+	if strings.Contains(_filePath, "3_suggestions") {
+		fileModified = true
+		newFileName = "5_" + unprocessedYaml.SuggestionName + ".md"
+	}
+
+	if fileModified {
+		Utils.ErrorChecker(os.WriteFile(_filePath, []byte(rawMarkdownContent), 0644))
+		Utils.ErrorChecker(os.Rename(_filePath, filepath.Clean(filepath.Join(filepath.Dir(_filePath), newFileName))))
 	}
 }
 
