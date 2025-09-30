@@ -135,20 +135,21 @@ func ProcessMarkdown(_reportPath string, _filePath string, _processedMarkdown *[
 
 	unprocessedMarkdown := string(blackfriday.Run([]byte(regexMatches[2])))
 
+	unprocessedMarkdown = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`).ReplaceAllStringFunc(unprocessedMarkdown, func(tokenMatch string) string {
+
+		if tokenValue, exists := _metadata.CustomVariables[strings.TrimPrefix(tokenMatch, "!")]; exists {
+			return tokenValue
+		}
+
+		if strings.TrimPrefix(tokenMatch, "!") == "Client" {
+			return _metadata.Client
+		}
+
+		return tokenMatch
+	})
+
 	if strings.Contains(unprocessedMarkdown, "<qa>") {
 		fmt.Printf("::warning:: %s: %d QA Comment Present In File \n", _filePath, strings.Count(unprocessedMarkdown, "<qa>"))
-	}
-
-	if strings.Contains(unprocessedMarkdown, "!Client") {
-		unprocessedMarkdown = strings.ReplaceAll(unprocessedMarkdown, "!Client", _metadata.Client)
-	}
-
-	if strings.Contains(unprocessedMarkdown, "!TargetAsset0") {
-		unprocessedMarkdown = strings.ReplaceAll(unprocessedMarkdown, "!TargetAsset0", _metadata.TargetInformation["TargetAsset0"])
-	}
-
-	if strings.Contains(unprocessedMarkdown, "!TargetAsset1") {
-		unprocessedMarkdown = strings.ReplaceAll(unprocessedMarkdown, "!TargetAsset1", _metadata.TargetInformation["TargetAsset1"])
 	}
 
 	if strings.Contains(unprocessedMarkdown, "<p><retest_fixed></p>") {
