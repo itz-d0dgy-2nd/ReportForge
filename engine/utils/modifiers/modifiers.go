@@ -60,6 +60,9 @@ func ModifySeverity(_filePath string, _severityAssessment Utils.SeverityAssessme
 			if unprocessedYaml.FindingSeverity == "" {
 				Utils.ErrorChecker(fmt.Errorf("invalid severity found in '%s'", _filePath))
 			}
+
+			fileModified = true
+			newFileName = _severityAssessment.Scales[unprocessedYaml.FindingSeverity] + "_" + unprocessedYaml.FindingName + ".md"
 		}
 	}
 
