@@ -6,6 +6,7 @@ import (
 	"ReportForge/engine/utils/handlers"
 	"flag"
 	"path/filepath"
+	"sort"
 )
 
 /*
@@ -80,7 +81,22 @@ func main() {
 	argumentsParsed := setupArgumentParser()
 	reportPaths := setupReportPaths(argumentsParsed)
 	reportData := setupReportData(reportPaths)
+
+	sort.Slice(reportData.Findings, func(i, j int) bool {
+		if reportData.Findings[i].Directory != reportData.Findings[j].Directory {
+			return reportData.Findings[i].Directory < reportData.Findings[j].Directory
+		}
+		return reportData.Findings[i].FileName < reportData.Findings[j].FileName
+	})
+
+	sort.Slice(reportData.Suggestions, func(i, j int) bool {
+		if reportData.Suggestions[i].Directory != reportData.Suggestions[j].Directory {
+			return reportData.Suggestions[i].Directory < reportData.Suggestions[j].Directory
+		}
+		return reportData.Suggestions[i].FileName < reportData.Suggestions[j].FileName
+	})
+
 	generators.GenerateHTML(reportData, reportPaths)
 	generators.GeneratePDF(reportPaths)
-	generators.GenerateXLSX(reportData.Findings, reportData.Suggestions)
+	generators.GenerateXLSX(reportData)
 }
