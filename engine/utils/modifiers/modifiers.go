@@ -57,7 +57,7 @@ func ModifySeverity(_filePath string, _severityAssessment Utils.SeverityAssessme
 
 		} else if !_severityAssessment.ConductSeverityAssessment {
 
-			if unprocessedYaml.FindingSeverity == "" {
+			if _, exists := _severityAssessment.Scales[unprocessedYaml.FindingSeverity]; unprocessedYaml.FindingSeverity == "" || !exists {
 				Utils.ErrorChecker(fmt.Errorf("invalid severity found in '%s'", _filePath))
 			}
 
