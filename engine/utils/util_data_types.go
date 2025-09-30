@@ -39,7 +39,8 @@ type MetadataYML struct {
 		DocumentCurrent    bool              `yaml:"DocumentCurrent"`
 		DocumentVersioning map[string]string `yaml:"DocumentVersioning"`
 	} `yaml:"DocumentInformation"`
-	StakeholderInformation []map[string]any `yaml:"StakeholderInformation"`
+	StakeholderInformation []map[string]any  `yaml:"StakeholderInformation"`
+	CustomVariables        map[string]string `yaml:"CustomVariables"`
 }
 
 type SeverityAssessmentYML struct {
