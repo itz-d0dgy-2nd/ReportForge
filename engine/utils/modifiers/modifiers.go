@@ -21,9 +21,10 @@ ModifySeverity → Updates the FindingSeverity YAML feild in markdown files base
   - For "3_suggestions" files → updates filename
 */
 func ModifySeverity(_filePath string, _severityAssessment Utils.SeverityAssessmentYML) {
-	newFileName := ""
-	fileModified := false
-	unprocessedYaml := Utils.MarkdownYML{}
+	var calculatedSeverity string
+	var newFileName string
+	var fileModified bool
+	var unprocessedYaml Utils.MarkdownYML
 
 	readMarkdownFile, errReadMarkdown := os.ReadFile(_filePath)
 	Utils.ErrorChecker(errReadMarkdown)
@@ -49,10 +50,16 @@ func ModifySeverity(_filePath string, _severityAssessment Utils.SeverityAssessme
 				Utils.ErrorChecker(fmt.Errorf("invalid impact or likelihood found in '%s'", _filePath))
 			}
 
-			if unprocessedYaml.FindingSeverity != _severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex] {
+			if _severityAssessment.FlipSeverityAssessment {
+				calculatedSeverity = _severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]
+			} else {
+				calculatedSeverity = _severityAssessment.CalculatedMatrix[likelihoodIndex][impactIndex]
+			}
+
+			if unprocessedYaml.FindingSeverity != calculatedSeverity {
 				fileModified = true
-				rawMarkdownContent = strings.Replace(rawMarkdownContent, "FindingSeverity: "+unprocessedYaml.FindingSeverity, "FindingSeverity: "+_severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex], 1)
-				newFileName = _severityAssessment.Scales[_severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]] + "_" + unprocessedYaml.FindingName + ".md"
+				rawMarkdownContent = strings.Replace(rawMarkdownContent, "FindingSeverity: "+unprocessedYaml.FindingSeverity, "FindingSeverity: "+calculatedSeverity, 1)
+				newFileName = _severityAssessment.Scales[calculatedSeverity] + "_" + unprocessedYaml.FindingName + ".md"
 			}
 
 		} else if !_severityAssessment.ConductSeverityAssessment {
@@ -86,8 +93,8 @@ ModifyIdentifiers → Updates the FindingID and SuggestionID YAML fields based o
   - TODO: Track ID state to avoid conflicts
 */
 func ModifyIdentifiers(_filePath, _identifierPrefix string, _identifierCounter *int) {
-	fileModified := false
-	unprocessedYaml := Utils.MarkdownYML{}
+	var fileModified bool
+	var unprocessedYaml Utils.MarkdownYML
 
 	readMarkdownFile, errReadMarkdown := os.ReadFile(_filePath)
 	Utils.ErrorChecker(errReadMarkdown)
