@@ -101,15 +101,15 @@ func ProcessSeverityMatrix(_filePath string, _severityAssessment *Utils.Severity
 		impactIndex := slices.Index(_severityAssessment.Impacts, unprocessedYaml.FindingImpact)
 		likelihoodIndex := slices.Index(_severityAssessment.Likelihoods, unprocessedYaml.FindingLikelihood)
 
-		firstIndex, secondIndex := impactIndex, likelihoodIndex
+		rowIndex, columnIndex := impactIndex, likelihoodIndex
 		if _severityAssessment.FlipSeverityAssessment {
-			firstIndex, secondIndex = likelihoodIndex, impactIndex
+			rowIndex, columnIndex = likelihoodIndex, impactIndex
 		}
 
-		if _severityAssessment.Matrix[firstIndex][secondIndex] == "" {
-			_severityAssessment.Matrix[firstIndex][secondIndex] = unprocessedYaml.FindingID
+		if _severityAssessment.Matrix[rowIndex][columnIndex] == "" {
+			_severityAssessment.Matrix[rowIndex][columnIndex] = unprocessedYaml.FindingID
 		} else {
-			_severityAssessment.Matrix[firstIndex][secondIndex] += ", " + unprocessedYaml.FindingID
+			_severityAssessment.Matrix[rowIndex][columnIndex] += ", " + unprocessedYaml.FindingID
 		}
 	}
 }
