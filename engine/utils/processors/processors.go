@@ -88,7 +88,7 @@ ProcessSeverityMatrix → Process markdown files with YAML frontmatter for repor
 */
 func ProcessSeverityMatrix(_filePath string, _severityAssessment *Utils.SeverityAssessmentYML) {
 	if _severityAssessment.ConductSeverityAssessment {
-		unprocessedYaml := Utils.MarkdownYML{}
+		var unprocessedYaml Utils.MarkdownYML
 
 		rawFileContent, errReadMarkdown := os.ReadFile(_filePath)
 		Utils.ErrorChecker(errReadMarkdown)
@@ -101,10 +101,15 @@ func ProcessSeverityMatrix(_filePath string, _severityAssessment *Utils.Severity
 		impactIndex := slices.Index(_severityAssessment.Impacts, unprocessedYaml.FindingImpact)
 		likelihoodIndex := slices.Index(_severityAssessment.Likelihoods, unprocessedYaml.FindingLikelihood)
 
-		if _severityAssessment.Matrix[impactIndex][likelihoodIndex] == "" {
-			_severityAssessment.Matrix[impactIndex][likelihoodIndex] = unprocessedYaml.FindingID
+		rowIndex, columnIndex := impactIndex, likelihoodIndex
+		if _severityAssessment.FlipSeverityAssessment {
+			rowIndex, columnIndex = likelihoodIndex, impactIndex
+		}
+
+		if _severityAssessment.Matrix[rowIndex][columnIndex] == "" {
+			_severityAssessment.Matrix[rowIndex][columnIndex] = unprocessedYaml.FindingID
 		} else {
-			_severityAssessment.Matrix[impactIndex][likelihoodIndex] += ", " + unprocessedYaml.FindingID
+			_severityAssessment.Matrix[rowIndex][columnIndex] += ", " + unprocessedYaml.FindingID
 		}
 	}
 }
@@ -122,7 +127,7 @@ ProcessMarkdown → Process markdown files with YAML frontmatter for report cont
   - Handles errors via Utils.ErrorChecker()
 */
 func ProcessMarkdown(_reportPath string, _filePath string, _processedMarkdown *[]Utils.Markdown, _metadata Utils.MetadataYML, _mutexLock *sync.Mutex) {
-	unprocessedYaml := Utils.MarkdownYML{}
+	var unprocessedYaml Utils.MarkdownYML
 
 	rawFileContent, errReadMD := os.ReadFile(_filePath)
 	Utils.ErrorChecker(errReadMD)
