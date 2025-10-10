@@ -51,9 +51,9 @@ func ModifySeverity(_filePath string, _severityAssessment Utils.SeverityAssessme
 			}
 
 			if _severityAssessment.FlipSeverityAssessment {
-				calculatedSeverity = _severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]
-			} else {
 				calculatedSeverity = _severityAssessment.CalculatedMatrix[likelihoodIndex][impactIndex]
+			} else {
+				calculatedSeverity = _severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]
 			}
 
 			if unprocessedYaml.FindingSeverity != calculatedSeverity {
