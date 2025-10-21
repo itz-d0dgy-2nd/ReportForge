@@ -1,12 +1,13 @@
 package generators
 
 import (
-	Utils "ReportForge/engine/utils"
+	"ReportForge/engine/utilities"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"text/template"
 
 	"github.com/chromedp/cdproto/page"
@@ -19,18 +20,25 @@ import (
 GenerateHTML → Generate final HTML report from processed report data
   - Sorts findings and suggestions slice's by directory name (primary) and filename (secondary) for consistent ordering
   - Parses "template.html" file and creates "Report.html"
-  - Handles errors via Utils.ErrorChecker()
+  - Handles errors via utilities.ErrorChecker()
 */
-func GenerateHTML(_reportData Utils.ReportDataStruct, _reportPaths Utils.ReportPathsStruct) {
+func GenerateHTML(_reportData utilities.ReportDataStruct, _reportPaths utilities.ReportPathsStruct) {
+	templateFunctionMap := template.FuncMap{
+		"inc":   func(i int) int { return i + 1 },
+		"dec":   func(i int) int { return i - 1 },
+		"add":   func(a, b int) int { return a + b },
+		"sub":   func(a, b int) int { return a - b },
+		"split": strings.Split,
+	}
 
-	templateHTML, errTemplateHTML := template.ParseFiles(_reportPaths.TemplatePath)
-	Utils.ErrorChecker(errTemplateHTML)
+	templateHTML, errTemplateHTML := template.New("template.html").Funcs(templateFunctionMap).ParseFiles(_reportPaths.TemplatePath)
+	utilities.ErrorChecker(errTemplateHTML)
 
 	createHTML, errCreateHTML := os.Create("Report.html")
-	Utils.ErrorChecker(errCreateHTML)
+	utilities.ErrorChecker(errCreateHTML)
 	defer createHTML.Close()
 
-	Utils.ErrorChecker(templateHTML.Execute(createHTML, _reportData))
+	utilities.ErrorChecker(templateHTML.Execute(createHTML, _reportData))
 }
 
 /*
@@ -40,10 +48,11 @@ GeneratePDF → Generate final PDF report from processed report data
     -- Windows systems - Detects Microsoft Edge and uses as Chromium executable
     -- CICD / Action systems - Adds no-sandbox flag when running in CICD/Action
   - Parses "Report.html" file and creates "Report.pdf
-  - Handles errors via Utils.ErrorChecker()
+  - Handles errors via utilities.ErrorChecker()
+  - TODO: Check if there is a way to get windows path from registry for known chromium binaries
 */
-func GeneratePDF(_reportPaths Utils.ReportPathsStruct) {
-	PDFBuffer := []byte{}
+func GeneratePDF(_reportPaths utilities.ReportPathsStruct) {
+	var PDFBuffer []byte
 
 	chromiumExecutionOptions := []chromedp.ExecAllocatorOption{
 		chromedp.Flag("headless", true),
@@ -81,10 +90,11 @@ func GeneratePDF(_reportPaths Utils.ReportPathsStruct) {
 	defer chromiumBrowserContextCancel()
 
 	absoluteFilePath, errAbsoluteFilePath := filepath.Abs(filepath.Join("Report.html"))
-	Utils.ErrorChecker(errAbsoluteFilePath)
+	utilities.ErrorChecker(errAbsoluteFilePath)
+	fileURL := "file:///" + filepath.ToSlash(absoluteFilePath)
 
-	Utils.ErrorChecker(chromedp.Run(chromiumBrowserContext,
-		chromedp.Navigate("file:///"+absoluteFilePath),
+	utilities.ErrorChecker(chromedp.Run(chromiumBrowserContext,
+		chromedp.Navigate(fileURL),
 		chromedp.ActionFunc(func(context context.Context) error {
 			print, _, errPrint := page.PrintToPDF().
 				WithPrintBackground(true).
@@ -94,14 +104,14 @@ func GeneratePDF(_reportPaths Utils.ReportPathsStruct) {
 				WithMarginRight(0).
 				WithPreferCSSPageSize(true).
 				Do(context)
-			Utils.ErrorChecker(errPrint)
+			utilities.ErrorChecker(errPrint)
 
 			PDFBuffer = print
 			return nil
 		}),
 	))
 
-	Utils.ErrorChecker(os.WriteFile(filepath.Join("Report.pdf"), PDFBuffer, 0o644))
+	utilities.ErrorChecker(os.WriteFile(filepath.Join("Report.pdf"), PDFBuffer, 0o644))
 }
 
 /*
@@ -112,9 +122,9 @@ GenerateXLSX → Generate final XLSX spreadsheet report from processed report da
     -- Adding headers (Finding Name, Status, Impact, Likelihood, Details) to new sheets
     -- Sanitizing and populating finding data into appropriate rows and columns
   - Removes default "Sheet1" and saves as "Report.xlsx"
-  - Handles errors via Utils.ErrorChecker()
+  - Handles errors via utilities.ErrorChecker()
 */
-func GenerateXLSX(_reportData Utils.ReportDataStruct) {
+func GenerateXLSX(_reportData utilities.ReportDataStruct) {
 	outputSpreadsheet := excelize.NewFile()
 	sanitiser := bluemonday.StrictPolicy()
 
@@ -135,7 +145,7 @@ func GenerateXLSX(_reportData Utils.ReportDataStruct) {
 		}
 
 		rows, errRows := outputSpreadsheet.GetRows(sheetName)
-		Utils.ErrorChecker(errRows)
+		utilities.ErrorChecker(errRows)
 		row := len(rows) + 1
 
 		values := []string{
@@ -152,6 +162,5 @@ func GenerateXLSX(_reportData Utils.ReportDataStruct) {
 	}
 
 	outputSpreadsheet.DeleteSheet("Sheet1")
-	Utils.ErrorChecker(outputSpreadsheet.SaveAs("Report.xlsx"))
-
+	utilities.ErrorChecker(outputSpreadsheet.SaveAs("Report.xlsx"))
 }

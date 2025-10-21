@@ -1,4 +1,4 @@
-package Utils
+package utilities
 
 import (
 	"errors"
@@ -9,7 +9,6 @@ import (
 )
 
 func ErrorChecker(_ErrAny error) {
-
 	if _ErrAny != nil {
 		if errors.Is(_ErrAny, fs.ErrNotExist) {
 			fmt.Printf("::Log:: %s ", _ErrAny.Error())

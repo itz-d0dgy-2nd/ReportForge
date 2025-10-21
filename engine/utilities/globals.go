@@ -1,4 +1,11 @@
-package Utils
+package utilities
+
+import "regexp"
+
+var RegexYamlMatch = regexp.MustCompile(`(?s)^---\n(.*?)\n---(?:\n(.*))?$`)
+var RegexTokenMatch = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`)
+var RegexMarkdownImageMatch = regexp.MustCompile(`(<p><img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/></p>`)
+var RegexMarkdownImageMatchScale = regexp.MustCompile(`(<p><img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}</p>`)
 
 type ArgumentsStruct struct {
 	DevelopmentMode bool
@@ -12,6 +19,7 @@ type ReportPathsStruct struct {
 	SummariesPath   string
 	FindingsPath    string
 	SuggestionsPath string
+	RisksPath       string
 	AppendicesPath  string
 }
 
@@ -28,6 +36,7 @@ type ReportDataStruct struct {
 	Summaries   []Markdown
 	Findings    []Markdown
 	Suggestions []Markdown
+	Risks       []Markdown
 	Appendices  []Markdown
 	Path        string
 }
@@ -44,19 +53,20 @@ type MetadataYML struct {
 }
 
 type SeverityAssessmentYML struct {
-	ConductSeverityAssessment bool              `yaml:"ConductSeverityAssessment"`
-	FlipSeverityAssessment    bool              `yaml:"FlipSeverityAssessment"`
-	Impacts                   []string          `yaml:"Impacts"`
-	Likelihoods               []string          `yaml:"Likelihoods"`
-	Scales                    map[string]string `yaml:"Scales"`
-	CalculatedMatrix          [5][5]string      `yaml:"CalculatedMatrix"`
-	Matrix                    [5][5]string      `yaml:"Matrix"`
+	ConductSeverityAssessment bool           `yaml:"ConductSeverityAssessment"`
+	FlipSeverityAssessment    bool           `yaml:"FlipSeverityAssessment"`
+	Impacts                   []string       `yaml:"Impacts"`
+	Likelihoods               []string       `yaml:"Likelihoods"`
+	Scales                    map[string]int `yaml:"Scales"`
+	CalculatedMatrix          [5][5]string   `yaml:"CalculatedMatrix"`
+	Matrix                    [5][5]string   `yaml:"Matrix"`
 }
 
 type MarkdownYML struct {
 	ReportSummariesAuthor    string `yaml:"ReportSummariesAuthor"`
 	ReportSummariesReviewers string `yaml:"ReportSummariesReviewers"`
 	FindingID                string `yaml:"FindingID"`
+	FindingIDLocked          bool   `yaml:"FindingIDLocked"`
 	FindingName              string `yaml:"FindingName"`
 	FindingTitle             string `yaml:"FindingTitle"`
 	FindingStatus            string `yaml:"FindingStatus"`
@@ -66,11 +76,26 @@ type MarkdownYML struct {
 	FindingAuthor            string `yaml:"FindingAuthor"`
 	FindingReviewers         string `yaml:"FindingReviewers"`
 	SuggestionID             string `yaml:"SuggestionID"`
+	SuggestionIDLocked       bool   `yaml:"SuggestionIDLocked"`
 	SuggestionName           string `yaml:"SuggestionName"`
 	SuggestionTitle          string `yaml:"SuggestionTitle"`
 	SuggestionStatus         string `yaml:"SuggestionStatus"`
 	SuggestionAuthor         string `yaml:"SuggestionAuthor"`
 	SuggestionReviewers      string `yaml:"SuggestionReviewers"`
+	RiskID                   string `yaml:"RiskID"`
+	RiskIDLocked             bool   `yaml:"RiskIDLocked"`
+	RiskName                 string `yaml:"RiskName"`
+	RiskDescription          string `yaml:"RiskDescription"`
+	RiskDrivers              string `yaml:"RiskDrivers"`
+	RiskConsequences         string `yaml:"RiskConsequences"`
+	RiskGrossLikelihood      string `yaml:"RiskGrossLikelihood"`
+	RiskGrossImpact          string `yaml:"RiskGrossImpact"`
+	RiskGrossRating          string `yaml:"RiskGrossRating"`
+	RiskRecommendedControls  string `yaml:"RiskRecommendedControls"`
+	RiskOwner                string `yaml:"RiskOwner"`
+	RiskTargetLikelihood     string `yaml:"RiskTargetLikelihood"`
+	RiskTargetImpact         string `yaml:"RiskTargetImpact"`
+	RiskTargetRating         string `yaml:"RiskTargetRating"`
 	AppendixName             string `yaml:"AppendixName"`
 	AppendixTitle            string `yaml:"AppendixTitle"`
 	AppendixStatus           string `yaml:"AppendixStatus"`
