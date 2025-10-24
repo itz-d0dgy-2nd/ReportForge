@@ -39,10 +39,10 @@ func ModifySeverity(_filePath string, _severityAssessment utilities.SeverityAsse
 	if strings.Contains(_filePath, "2_findings") {
 		if _severityAssessment.ConductSeverityAssessment {
 			impactIndex := slices.Index(_severityAssessment.Impacts, unprocessedYaml.FindingImpact)
-			validators.ValidateImpactLikelihoodIndex(impactIndex, "impact", _filePath)
+			validators.ValidateImpactIndex(impactIndex, "impact", _filePath)
 
 			likelihoodIndex := slices.Index(_severityAssessment.Likelihoods, unprocessedYaml.FindingLikelihood)
-			validators.ValidateImpactLikelihoodIndex(likelihoodIndex, "likelihood", _filePath)
+			validators.ValidateLikelihoodIndex(likelihoodIndex, "likelihood", _filePath)
 
 			if _severityAssessment.FlipSeverityAssessment {
 				calculatedSeverity = _severityAssessment.CalculatedMatrix[likelihoodIndex][impactIndex]
@@ -50,17 +50,21 @@ func ModifySeverity(_filePath string, _severityAssessment utilities.SeverityAsse
 				calculatedSeverity = _severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]
 			}
 
+			severityScaleIndex := slices.Index(_severityAssessment.Severities, calculatedSeverity)
+			validators.ValidateSeverityIndex(severityScaleIndex, _filePath)
+
 			if unprocessedYaml.FindingSeverity != calculatedSeverity {
 				fileModified = true
 				rawMarkdownContent = strings.Replace(rawMarkdownContent, "FindingSeverity: "+unprocessedYaml.FindingSeverity, "FindingSeverity: "+calculatedSeverity, 1)
 			}
-			newFileName = strconv.Itoa(_severityAssessment.Scales[calculatedSeverity]) + "_" + unprocessedYaml.FindingName + ".md"
+
+			newFileName = strconv.Itoa(severityScaleIndex) + "_" + unprocessedYaml.FindingName + ".md"
 
 		} else {
-			validators.ValidateSeverityKey(unprocessedYaml.FindingSeverity, _severityAssessment.Scales, _filePath)
-			severityScale := _severityAssessment.Scales[unprocessedYaml.FindingSeverity]
-			newFileName = strconv.Itoa(severityScale) + "_" + unprocessedYaml.FindingName + ".md"
+			severityScaleIndex := slices.Index(_severityAssessment.Severities, calculatedSeverity)
+			validators.ValidateSeverityIndex(severityScaleIndex, _filePath)
 
+			newFileName = strconv.Itoa(severityScaleIndex) + "_" + unprocessedYaml.FindingName + ".md"
 		}
 	}
 

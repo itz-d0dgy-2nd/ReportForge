@@ -22,9 +22,18 @@ func ValidateYamlFrontmatter(_regexMatches []string, _filePath string, _unproces
 }
 
 /*
-ValidateImpactLikelihoodIndex → Validates that impact or likelihood index is valid
+ValidateImpactIndex → Validates that impact or likelihood index is valid
 */
-func ValidateImpactLikelihoodIndex(_index int, _fieldName string, _filePath string) {
+func ValidateImpactIndex(_index int, _fieldName string, _filePath string) {
+	if _index == -1 {
+		utilities.ErrorChecker(fmt.Errorf("invalid %s found in ( %s )", _fieldName, _filePath))
+	}
+}
+
+/*
+ValidateLikelihoodIndex → Validates that impact or likelihood index is valid
+*/
+func ValidateLikelihoodIndex(_index int, _fieldName string, _filePath string) {
 	if _index == -1 {
 		utilities.ErrorChecker(fmt.Errorf("invalid %s found in ( %s )", _fieldName, _filePath))
 	}
@@ -33,12 +42,8 @@ func ValidateImpactLikelihoodIndex(_index int, _fieldName string, _filePath stri
 /*
 ValidateSeverityExists → Validates that severity key is valid
 */
-func ValidateSeverityKey(_severity string, _scales map[string]int, _filePath string) {
-	if _severity == "" {
-		utilities.ErrorChecker(fmt.Errorf("empty severity found in ( %s )", _filePath))
-	}
-
-	if _, exists := _scales[_severity]; !exists {
+func ValidateSeverityIndex(_index int, _filePath string) {
+	if _index == -1 {
 		utilities.ErrorChecker(fmt.Errorf("invalid severity found in ( %s )", _filePath))
 	}
 }

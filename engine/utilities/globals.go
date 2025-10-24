@@ -53,13 +53,13 @@ type MetadataYML struct {
 }
 
 type SeverityAssessmentYML struct {
-	ConductSeverityAssessment bool           `yaml:"ConductSeverityAssessment"`
-	FlipSeverityAssessment    bool           `yaml:"FlipSeverityAssessment"`
-	Impacts                   []string       `yaml:"Impacts"`
-	Likelihoods               []string       `yaml:"Likelihoods"`
-	Scales                    map[string]int `yaml:"Scales"`
-	CalculatedMatrix          [5][5]string   `yaml:"CalculatedMatrix"`
-	Matrix                    [5][5]string   `yaml:"Matrix"`
+	ConductSeverityAssessment bool         `yaml:"ConductSeverityAssessment"`
+	FlipSeverityAssessment    bool         `yaml:"FlipSeverityAssessment"`
+	Impacts                   []string     `yaml:"Impacts"`
+	Likelihoods               []string     `yaml:"Likelihoods"`
+	Severities                []string     `yaml:"Severities"`
+	CalculatedMatrix          [5][5]string `yaml:"CalculatedMatrix"`
+	Matrix                    [5][5]string `yaml:"Matrix"`
 }
 
 type MarkdownYML struct {
