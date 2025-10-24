@@ -4,8 +4,8 @@ import "regexp"
 
 var RegexYamlMatch = regexp.MustCompile(`(?s)^---\n(.*?)\n---(?:\n(.*))?$`)
 var RegexTokenMatch = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`)
-var RegexMarkdownImageMatch = regexp.MustCompile(`(<p><img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/></p>`)
-var RegexMarkdownImageMatchScale = regexp.MustCompile(`(<p><img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}</p>`)
+var RegexMarkdownImageMatch = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>`)
+var RegexMarkdownImageMatchScale = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}`)
 
 type ArgumentsStruct struct {
 	DevelopmentMode bool
