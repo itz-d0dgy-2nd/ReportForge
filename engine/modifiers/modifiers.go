@@ -112,21 +112,21 @@ func ModifyIdentifiers(_filePath, _identifierPrefix string, _identifierCounter *
 		identifierLocked = unprocessedYaml.FindingIDLocked
 		identifierField = "FindingID"
 		identifierLockField = "FindingIDLocked"
-
 	} else {
 		identifier = strings.TrimSpace(unprocessedYaml.SuggestionID)
 		identifierLocked = unprocessedYaml.SuggestionIDLocked
 		identifierField = "SuggestionID"
 		identifierLockField = "SuggestionIDLocked"
-
 	}
 
 	if identifierLocked {
 		if identifier != "" && strings.HasPrefix(identifier, _identifierPrefix) {
-			var lockedIDNumber int
-			if _, err := fmt.Sscanf(strings.TrimPrefix(identifier, _identifierPrefix), "%d", &lockedIDNumber); err == nil {
-				if lockedIDNumber > *_identifierCounter {
-					*_identifierCounter = lockedIDNumber
+			identifierSuffix := strings.TrimPrefix(identifier, _identifierPrefix)
+			var lockedIdentifierNumber int
+
+			if _, errParseIdentifier := fmt.Sscanf(identifierSuffix, "%d", &lockedIdentifierNumber); errParseIdentifier == nil {
+				if lockedIdentifierNumber > *_identifierCounter {
+					*_identifierCounter = lockedIdentifierNumber
 				}
 			}
 		}
@@ -135,7 +135,6 @@ func ModifyIdentifiers(_filePath, _identifierPrefix string, _identifierCounter *
 			fileModified = true
 			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
 		}
-
 	} else {
 		*_identifierCounter++
 		generatedIdentifier := fmt.Sprintf("%s%d", _identifierPrefix, *_identifierCounter)

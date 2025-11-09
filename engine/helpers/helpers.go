@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -33,7 +32,7 @@ func PrefixMapHelper(_directory string) map[string]string {
 				if currentIndex >= 26 {
 					utilities.ErrorChecker(fmt.Errorf("too many subdirectories: maximum 26 allowed (A-Z)"))
 				}
-				identifierPrefixMap[filepath.Join(subdirectoryPath, directoryEntry.Name())] = strconv.Itoa('A' + currentIndex)
+				identifierPrefixMap[filepath.Join(subdirectoryPath, directoryEntry.Name())] = string(rune('A' + currentIndex))
 				currentIndex++
 			}
 		}

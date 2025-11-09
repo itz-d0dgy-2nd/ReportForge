@@ -107,6 +107,7 @@ func HandleIdentifierModifier(_directory string, _metadata utilities.MetadataYML
 			break
 		}
 	}
+
 	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
 		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" {
 			return errAnonymousFunction
