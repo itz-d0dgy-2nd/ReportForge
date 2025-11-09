@@ -103,6 +103,7 @@ func GeneratePDF(_reportPaths utilities.ReportPathsStruct) {
 				WithMarginLeft(0).
 				WithMarginRight(0).
 				WithPreferCSSPageSize(true).
+				WithGenerateTaggedPDF(true).
 				Do(context)
 			utilities.ErrorChecker(errPrint)
 

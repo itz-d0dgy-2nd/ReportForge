@@ -4,6 +4,9 @@ import (
 	"ReportForge/engine/utilities"
 	"ReportForge/engine/validators"
 	"fmt"
+	"image"
+	"image/jpeg"
+	_ "image/png"
 	"os"
 	"path/filepath"
 	"slices"
@@ -50,22 +53,17 @@ func ModifySeverity(_filePath string, _severityAssessment utilities.SeverityAsse
 				calculatedSeverity = _severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]
 			}
 
-			severityScaleIndex := slices.Index(_severityAssessment.Severities, calculatedSeverity)
-			validators.ValidateSeverityIndex(severityScaleIndex, _filePath)
-
 			if unprocessedYaml.FindingSeverity != calculatedSeverity {
 				fileModified = true
 				rawMarkdownContent = strings.Replace(rawMarkdownContent, "FindingSeverity: "+unprocessedYaml.FindingSeverity, "FindingSeverity: "+calculatedSeverity, 1)
 			}
-
-			newFileName = strconv.Itoa(severityScaleIndex) + "_" + unprocessedYaml.FindingName + ".md"
-
 		} else {
-			severityScaleIndex := slices.Index(_severityAssessment.Severities, calculatedSeverity)
-			validators.ValidateSeverityIndex(severityScaleIndex, _filePath)
-
-			newFileName = strconv.Itoa(severityScaleIndex) + "_" + unprocessedYaml.FindingName + ".md"
+			calculatedSeverity = unprocessedYaml.FindingSeverity
 		}
+
+		severityScaleIndex := slices.Index(_severityAssessment.Severities, calculatedSeverity)
+		validators.ValidateSeverityIndex(severityScaleIndex, _filePath)
+		newFileName = strconv.Itoa(severityScaleIndex) + "_" + unprocessedYaml.FindingName + ".md"
 	}
 
 	if strings.Contains(_filePath, "3_suggestions") {
@@ -93,7 +91,7 @@ ModifyIdentifiers → Updates the FindingID and SuggestionID YAML fields based o
     -- In Release status → sets all lock fields to true
   - TODO: Clean this up, it can be improved.
 */
-func ModifyIdentifiers(_filePath, _identifierPrefix string, _identifierCounter *int, _isRelease bool) {
+func ModifyIdentifiers(_filePath, _identifierPrefix string, _identifierCounter *int, _documentStatus string) {
 	var fileModified bool
 	var unprocessedYaml utilities.MarkdownYML
 	var identifier string
@@ -133,7 +131,7 @@ func ModifyIdentifiers(_filePath, _identifierPrefix string, _identifierCounter *
 			}
 		}
 
-		if _isRelease && strings.Contains(rawMarkdownContent, identifierLockField+": false") {
+		if _documentStatus == "Release" && strings.Contains(rawMarkdownContent, identifierLockField+": false") {
 			fileModified = true
 			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
 		}
@@ -149,12 +147,62 @@ func ModifyIdentifiers(_filePath, _identifierPrefix string, _identifierCounter *
 			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierField+": "+identifier, identifierField+": "+generatedIdentifier, 1)
 		}
 
-		if _isRelease {
+		if _documentStatus == "Release" {
 			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
 		}
 	}
 
 	if fileModified {
 		utilities.ErrorChecker(os.WriteFile(_filePath, []byte(rawMarkdownContent), 0644))
+	}
+}
+
+/*
+ModifyImage → Compresses images when document status is Release
+  - Backs up original images to originals/ subdirectory
+  - Creates JPEG compressed version (Quality 75) at original path
+  - Skips processing if already compressed (backup exists) or file is in originals/ directory
+*/
+func ModifyImage(_filePath string, _documentStatus string) {
+	if _documentStatus != "Release" {
+		return
+	}
+
+	if filepath.Base(filepath.Dir(_filePath)) == "originals" {
+		return
+	}
+
+	originalsDirectory := filepath.Join(filepath.Dir(_filePath), "originals")
+	originalBackupPath := filepath.Join(originalsDirectory, filepath.Base(_filePath))
+
+	if _, errStatCheck := os.Stat(originalBackupPath); errStatCheck == nil {
+		return
+	}
+
+	errMakeDirectory := os.MkdirAll(originalsDirectory, 0755)
+	utilities.ErrorChecker(errMakeDirectory)
+
+	rawFileContent, errRawFileContent := os.Open(_filePath)
+	utilities.ErrorChecker(errRawFileContent)
+	defer rawFileContent.Close()
+
+	decodedImage, _, errDecodedImage := image.Decode(rawFileContent)
+	utilities.ErrorChecker(errDecodedImage)
+
+	temporaryFilePath := _filePath + ".tmp"
+	compressedFile, errCompressedFile := os.Create(temporaryFilePath)
+	utilities.ErrorChecker(errCompressedFile)
+
+	errEncodeImage := jpeg.Encode(compressedFile, decodedImage, &jpeg.Options{Quality: 75})
+	compressedFile.Close()
+	utilities.ErrorChecker(errEncodeImage)
+
+	errRenameOriginalFile := os.Rename(_filePath, originalBackupPath)
+	utilities.ErrorChecker(errRenameOriginalFile)
+
+	errRenameCompressedFile := os.Rename(temporaryFilePath, _filePath)
+	if errRenameCompressedFile != nil {
+		os.Rename(originalBackupPath, _filePath)
+		utilities.ErrorChecker(errRenameCompressedFile)
 	}
 }

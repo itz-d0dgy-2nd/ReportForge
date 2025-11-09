@@ -87,7 +87,7 @@ HandleIdentifierModifier → Recursively walks directory tree and modifies markd
   - TODO: Remove the need for the helper function ( TrackedLockedHelper() )...
 */
 func HandleIdentifierModifier(_directory string, _metadata utilities.MetadataYML) {
-	var documentStatus bool
+	var documentStatus string
 	var identifierPrefixMap = helpers.PrefixMapHelper(_directory)
 	var identifierCounterMap = make(map[string]*int)
 
@@ -103,11 +103,10 @@ func HandleIdentifierModifier(_directory string, _metadata utilities.MetadataYML
 
 	for _, documentInformation := range _metadata.DocumentInformation {
 		if documentInformation.DocumentCurrent {
-			documentStatus = (documentInformation.DocumentVersioning["DocumentStatus"] == "Release")
+			documentStatus = documentInformation.DocumentVersioning["DocumentStatus"]
 			break
 		}
 	}
-
 	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
 		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" {
 			return errAnonymousFunction
@@ -122,6 +121,48 @@ func HandleIdentifierModifier(_directory string, _metadata utilities.MetadataYML
 	})
 
 	utilities.ErrorChecker(errDirectoryWalk)
+}
+
+/*
+HandleImageModifier → Recursively walks directory tree and compresses images when document status is Release
+  - Walks through all subdirectories using filepath.WalkDir()
+  - For each .jpg, .jpeg, .png file within "Screenshots" directories → modifiers.ModifyImage()
+    -- Uses waitgroup to wait for all goroutines to finish before exiting
+    -- Uses semaphore to limit concurrent goroutines to runtime.NumCPU()*2
+  - Handles errors via utilities.ErrorChecker()
+*/
+func HandleImageModifier(_directory string, _metadata utilities.MetadataYML) {
+	var documentStatus string
+	var waitGroup sync.WaitGroup
+	var semaphore = make(chan struct{}, runtime.NumCPU()*2)
+
+	for _, documentInformation := range _metadata.DocumentInformation {
+		if documentInformation.DocumentCurrent {
+			documentStatus = documentInformation.DocumentVersioning["DocumentStatus"]
+			break
+		}
+	}
+
+	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
+		if errAnonymousFunction != nil || directoryContents.IsDir() || (strings.ToLower(filepath.Ext(directoryContents.Name())) != ".jpg" && strings.ToLower(filepath.Ext(directoryContents.Name())) != ".jpeg" && strings.ToLower(filepath.Ext(directoryContents.Name())) != ".png") {
+			return errAnonymousFunction
+		}
+
+		if strings.Contains(filePath, "Screenshots") {
+			waitGroup.Add(1)
+			semaphore <- struct{}{}
+
+			go func(path string) {
+				defer waitGroup.Done()
+				defer func() { <-semaphore }()
+				modifiers.ModifyImage(path, documentStatus)
+			}(filePath)
+		}
+		return nil
+	})
+
+	utilities.ErrorChecker(errDirectoryWalk)
+	waitGroup.Wait()
 }
 
 /*

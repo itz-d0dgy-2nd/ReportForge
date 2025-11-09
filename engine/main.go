@@ -70,6 +70,7 @@ func setupReportData(_reportPaths utilities.ReportPathsStruct) utilities.ReportD
 
 	handlers.HandleSeverityModifier(_reportPaths.FindingsPath, severityAssessment)
 	handlers.HandleIdentifierModifier(_reportPaths.RootPath, metadata)
+	handlers.HandleImageModifier(_reportPaths.RootPath, metadata)
 
 	return utilities.ReportDataStruct{
 		Metadata:    metadata,

@@ -119,8 +119,8 @@ func ProcessMarkdown(_reportPath string, _filePath string, _processedMarkdown *[
 		return tokenMatch
 	})
 
-	unprocessedMarkdown = utilities.RegexMarkdownImageMatchScale.ReplaceAllString(unprocessedMarkdown, `$1 src="`+_reportPath+`/$2"$3 style="$4"/></p>`)
-	unprocessedMarkdown = utilities.RegexMarkdownImageMatch.ReplaceAllString(unprocessedMarkdown, `$1 src="`+_reportPath+`/$2"$3/></p>`)
+	unprocessedMarkdown = utilities.RegexMarkdownImageMatchScale.ReplaceAllString(unprocessedMarkdown, `$1 src="`+_reportPath+`/$2"$3 style="$4"/>`)
+	unprocessedMarkdown = utilities.RegexMarkdownImageMatch.ReplaceAllString(unprocessedMarkdown, `$1 src="`+_reportPath+`/$2"$3/>`)
 
 	if strings.Contains(unprocessedMarkdown, "<qa>") {
 		fmt.Printf("::warning:: %s: %d QA Comment Present In File \n", _filePath, strings.Count(unprocessedMarkdown, "<qa>"))
