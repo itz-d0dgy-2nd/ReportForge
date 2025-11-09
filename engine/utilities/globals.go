@@ -54,7 +54,9 @@ type MetadataYML struct {
 
 type SeverityAssessmentYML struct {
 	ConductSeverityAssessment bool         `yaml:"ConductSeverityAssessment"`
-	FlipSeverityAssessment    bool         `yaml:"FlipSeverityAssessment"`
+	DisplaySeverityMatrix     bool         `yaml:"DisplaySeverityMatrix"`
+	FlipSeverityMatrix        bool         `yaml:"FlipSeverityMatrix"`
+	DisplaySeverityBarGraph   bool         `yaml:"DisplaySeverityBarGraph"`
 	Impacts                   []string     `yaml:"Impacts"`
 	Likelihoods               []string     `yaml:"Likelihoods"`
 	Severities                []string     `yaml:"Severities"`

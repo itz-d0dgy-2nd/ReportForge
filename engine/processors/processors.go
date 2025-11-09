@@ -70,7 +70,7 @@ func ProcessSeverityMatrix(_filePath string, _severityAssessment *utilities.Seve
 		likelihoodIndex := slices.Index(_severityAssessment.Likelihoods, unprocessedYaml.FindingLikelihood)
 
 		rowIndex, columnIndex := impactIndex, likelihoodIndex
-		if _severityAssessment.FlipSeverityAssessment {
+		if _severityAssessment.FlipSeverityMatrix {
 			rowIndex, columnIndex = likelihoodIndex, impactIndex
 		}
 

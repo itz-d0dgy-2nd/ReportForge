@@ -47,7 +47,7 @@ func ModifySeverity(_filePath string, _severityAssessment utilities.SeverityAsse
 			likelihoodIndex := slices.Index(_severityAssessment.Likelihoods, unprocessedYaml.FindingLikelihood)
 			validators.ValidateLikelihoodIndex(likelihoodIndex, "likelihood", _filePath)
 
-			if _severityAssessment.FlipSeverityAssessment {
+			if _severityAssessment.FlipSeverityMatrix {
 				calculatedSeverity = _severityAssessment.CalculatedMatrix[likelihoodIndex][impactIndex]
 			} else {
 				calculatedSeverity = _severityAssessment.CalculatedMatrix[impactIndex][likelihoodIndex]
