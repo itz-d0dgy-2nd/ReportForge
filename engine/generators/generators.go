@@ -22,7 +22,7 @@ GenerateHTML → Generate final HTML report from processed report data
   - Parses "template.html" file and creates "Report.html"
   - Handles errors via utilities.ErrorChecker()
 */
-func GenerateHTML(_reportData utilities.ReportDataStruct, _reportPaths utilities.ReportPathsStruct) {
+func GenerateHTML(_reportData utilities.ReportData, _reportPaths utilities.ReportPaths) {
 	templateFunctionMap := template.FuncMap{
 		"inc":   func(i int) int { return i + 1 },
 		"dec":   func(i int) int { return i - 1 },
@@ -51,7 +51,7 @@ GeneratePDF → Generate final PDF report from processed report data
   - Handles errors via utilities.ErrorChecker()
   - TODO: Check if there is a way to get windows path from registry for known chromium binaries
 */
-func GeneratePDF(_reportPaths utilities.ReportPathsStruct) {
+func GeneratePDF(_reportPaths utilities.ReportPaths) {
 	var PDFBuffer []byte
 
 	chromiumExecutionOptions := []chromedp.ExecAllocatorOption{
@@ -125,7 +125,7 @@ GenerateXLSX → Generate final XLSX spreadsheet report from processed report da
   - Removes default "Sheet1" and saves as "Report.xlsx"
   - Handles errors via utilities.ErrorChecker()
 */
-func GenerateXLSX(_reportData utilities.ReportDataStruct) {
+func GenerateXLSX(_reportData utilities.ReportData) {
 	outputSpreadsheet := excelize.NewFile()
 	sanitiser := bluemonday.StrictPolicy()
 

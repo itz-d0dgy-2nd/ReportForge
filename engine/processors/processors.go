@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/russross/blackfriday/v2"
 	"gopkg.in/yaml.v3"
@@ -94,7 +93,7 @@ ProcessMarkdown → Process markdown files with YAML frontmatter for report cont
   - Thread-safely appends processed markdown to slice using mutex lock
   - Handles errors via utilities.ErrorChecker()
 */
-func ProcessMarkdown(_reportPath string, _filePath string, _processedMarkdown *[]utilities.Markdown, _metadata utilities.MetadataYML, _mutexLock *sync.Mutex) {
+func ProcessMarkdown(_reportPath string, _filePath string, _markdownChannel chan utilities.MarkdownFile, _metadata utilities.MetadataYML) {
 	var unprocessedYaml utilities.MarkdownYML
 
 	rawFileContent, errRawFileContent := os.ReadFile(_filePath)
@@ -136,12 +135,10 @@ func ProcessMarkdown(_reportPath string, _filePath string, _processedMarkdown *[
 		unprocessedMarkdown = strings.ReplaceAll(unprocessedMarkdown, "<p></retest_not_fixed></p>", "</retest_not_fixed>")
 	}
 
-	_mutexLock.Lock()
-	*_processedMarkdown = append(*_processedMarkdown, utilities.Markdown{
+	_markdownChannel <- utilities.MarkdownFile{
 		Directory: filepath.Base(filepath.Dir(_filePath)),
 		FileName:  filepath.Base(_filePath),
 		Headers:   unprocessedYaml,
 		Body:      unprocessedMarkdown,
-	})
-	_mutexLock.Unlock()
+	}
 }

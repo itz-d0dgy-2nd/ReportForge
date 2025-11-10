@@ -199,11 +199,11 @@ HandleMarkdownProcessor → Recursively walks directory tree and processes markd
   - Handles errors via utilities.ErrorChecker()
   - Returns processed markdown of type []utilities.Markdown
 */
-func HandleMarkdownProcessor(_reportPath string, _directory string, _metadata utilities.MetadataYML) []utilities.Markdown {
-	var processedMarkdown []utilities.Markdown
+func HandleMarkdownProcessor(_reportPath string, _directory string, _metadata utilities.MetadataYML) []utilities.MarkdownFile {
 	var waitGroup sync.WaitGroup
-	var mutexLock sync.Mutex
 	var semaphore = make(chan struct{}, runtime.NumCPU()*2)
+	var markdownChannel = make(chan utilities.MarkdownFile)
+	var processedMarkdown []utilities.MarkdownFile
 
 	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
 		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" {
@@ -216,14 +216,22 @@ func HandleMarkdownProcessor(_reportPath string, _directory string, _metadata ut
 		go func(path string) {
 			defer waitGroup.Done()
 			defer func() { <-semaphore }()
-			processors.ProcessMarkdown(_reportPath, path, &processedMarkdown, _metadata, &mutexLock)
+			processors.ProcessMarkdown(_reportPath, path, markdownChannel, _metadata)
 		}(filePath)
 
 		return nil
 	})
 
 	utilities.ErrorChecker(errDirectoryWalk)
-	waitGroup.Wait()
+
+	go func() {
+		waitGroup.Wait()
+		close(markdownChannel)
+	}()
+
+	for markdown := range markdownChannel {
+		processedMarkdown = append(processedMarkdown, markdown)
+	}
 
 	return processedMarkdown
 }

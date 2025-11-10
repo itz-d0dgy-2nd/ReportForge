@@ -14,8 +14,8 @@ setupArgumentParser → Configure ReportForge argument parser:
   - Flag ( `--developmentMode` ): Account for the nested report directory due to git submodule
   - Flag ( `--customPath` ): Account for a custom report directory
 */
-func setupArgumentParser() utilities.ArgumentsStruct {
-	var argumentsProvided utilities.ArgumentsStruct
+func setupArgumentParser() utilities.Arguments {
+	var argumentsProvided utilities.Arguments
 
 	flag.BoolVar(&argumentsProvided.DevelopmentMode, "developmentMode", false, "Run in development mode")
 	flag.StringVar(&argumentsProvided.CustomMode, "customPath", "report", "Custom Path")
@@ -35,14 +35,14 @@ setupReportPaths → Configure ReportForge paths, normalising them for Windows/U
   - RisksPath: The report markdown files path (Default: report/4_risks/* || report\4_risks\*)
   - AppendicesPath: The report markdown files path (Default: report/5_appendices/* || report\5_appendices\*)
 */
-func setupReportPaths(_argumentsProvided utilities.ArgumentsStruct) utilities.ReportPathsStruct {
+func setupReportPaths(_argumentsProvided utilities.Arguments) utilities.ReportPaths {
 	rootPath := _argumentsProvided.CustomMode
 
 	if _argumentsProvided.DevelopmentMode {
 		rootPath = filepath.Clean(filepath.Join(rootPath, "report"))
 	}
 
-	return utilities.ReportPathsStruct{
+	return utilities.ReportPaths{
 		RootPath:        rootPath,
 		ConfigPath:      filepath.Clean(filepath.Join(rootPath, "0_report_config")),
 		TemplatePath:    filepath.Clean(filepath.Join(rootPath, "0_report_template", "html", "template.html")),
@@ -65,14 +65,14 @@ setupReportData → Execute ReportForge handlers, modifying markdown YAML frontm
   - Appendices: Recursively iterates over directory structure foreach .md and process the appendices
   - Path: The report file path, used for HTML `href=` and `src=`
 */
-func setupReportData(_reportPaths utilities.ReportPathsStruct) utilities.ReportDataStruct {
+func setupReportData(_reportPaths utilities.ReportPaths) utilities.ReportData {
 	metadata, severityAssessment := handlers.HandleConfigProcessor(_reportPaths.ConfigPath)
 
 	handlers.HandleSeverityModifier(_reportPaths.FindingsPath, severityAssessment)
 	handlers.HandleIdentifierModifier(_reportPaths.RootPath, metadata)
 	handlers.HandleImageModifier(_reportPaths.RootPath, metadata)
 
-	return utilities.ReportDataStruct{
+	return utilities.ReportData{
 		Metadata:    metadata,
 		Severity:    handlers.HandleSeverityProcessor(_reportPaths.FindingsPath, severityAssessment),
 		Summaries:   handlers.HandleMarkdownProcessor(_reportPaths.RootPath, _reportPaths.SummariesPath, metadata),
@@ -90,7 +90,7 @@ setupMarkdownSorting → Sorts ReportForge data alphabetically by directory and 
   - Sorts FileName field in ascending order
   - Modifies the slice in-place
 */
-func setupMarkdownSorting(_markdown []utilities.Markdown) {
+func setupMarkdownSorting(_markdown []utilities.MarkdownFile) {
 	sort.Slice(_markdown, func(i, j int) bool {
 		if _markdown[i].Directory != _markdown[j].Directory {
 			return _markdown[i].Directory < _markdown[j].Directory

@@ -7,12 +7,12 @@ var RegexTokenMatch = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`)
 var RegexMarkdownImageMatch = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>`)
 var RegexMarkdownImageMatchScale = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}`)
 
-type ArgumentsStruct struct {
+type Arguments struct {
 	DevelopmentMode bool
 	CustomMode      string
 }
 
-type ReportPathsStruct struct {
+type ReportPaths struct {
 	RootPath        string
 	ConfigPath      string
 	TemplatePath    string
@@ -23,21 +23,21 @@ type ReportPathsStruct struct {
 	AppendicesPath  string
 }
 
-type Markdown struct {
+type MarkdownFile struct {
 	Directory string
 	FileName  string
 	Headers   MarkdownYML
 	Body      string
 }
 
-type ReportDataStruct struct {
+type ReportData struct {
 	Metadata    MetadataYML
 	Severity    SeverityAssessmentYML
-	Summaries   []Markdown
-	Findings    []Markdown
-	Suggestions []Markdown
-	Risks       []Markdown
-	Appendices  []Markdown
+	Summaries   []MarkdownFile
+	Findings    []MarkdownFile
+	Suggestions []MarkdownFile
+	Risks       []MarkdownFile
+	Appendices  []MarkdownFile
 	Path        string
 }
 
