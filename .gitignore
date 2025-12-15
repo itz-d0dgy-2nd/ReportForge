@@ -1,4 +1,6 @@
-Report*
+*.pdf
+*.html
+*.xlsx
 
 go.mod
 go.sum
