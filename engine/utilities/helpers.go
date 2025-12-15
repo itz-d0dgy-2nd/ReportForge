@@ -140,8 +140,8 @@ func OptimiseImagesForPDF(_screenshotsPath string) {
 				originalsDirectory := filepath.Join(filepath.Dir(path), ScreenshotsOriginalsDirectory)
 				originalBackupPath := filepath.Join(originalsDirectory, filepath.Base(path))
 
-				_, errOriginalBackupStatistics := os.Stat(originalBackupPath)
-				if errOriginalBackupStatistics == nil {
+				_, errOriginalBackupStatus := os.Stat(originalBackupPath)
+				if errOriginalBackupStatus == nil {
 					return
 				}
 
