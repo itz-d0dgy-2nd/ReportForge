@@ -1,39 +1,50 @@
 package handlers
 
 import (
-	"ReportForge/engine/helpers"
 	"ReportForge/engine/modifiers"
 	"ReportForge/engine/processors"
 	"ReportForge/engine/utilities"
 	"io/fs"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 /*
 HandleConfigProcessor → Recursively walks directory tree and processes YAML config files
   - Walks through all subdirectories using filepath.WalkDir()
-  - For each .yml file containing "metadata" or "severity_assessment" in filename → calls processors.ProcessConfigMetadata() or processors.ProcessConfigSeverityAssessment()
+  - For each .yml file in report_config directory:
+    -- Calls processors.ProcessConfigMetadata() or,
+    -- Calls processors.ProcessConfigSeverityAssessment() or,
+    -- Calls processors.ProcessConfigDirectoryOrder()
   - Handles errors via utilities.ErrorChecker()
-  - Returns processed yml of type utilities.MetadataYML, utilities.SeverityAssessmentYML
+  - Returns processed yml of type utilities.MetadataYML, utilities.SeverityAssessmentYML, utilities.DirectoryOrderYML
 */
-func HandleConfigProcessor(_directory string) (utilities.MetadataYML, utilities.SeverityAssessmentYML) {
+func HandleConfigProcessor(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) (utilities.MetadataYML, utilities.SeverityAssessmentYML, utilities.DirectoryOrderYML) {
 	var processedMetadata utilities.MetadataYML
 	var processedSeverityAssessment utilities.SeverityAssessmentYML
+	var processedDirectoryOrder utilities.DirectoryOrderYML
 
-	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
-		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".yml" {
+	errDirectoryWalk := filepath.WalkDir(_reportPaths.ConfigPath, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
+		if errAnonymousFunction != nil {
 			return errAnonymousFunction
 		}
 
-		if strings.Contains(directoryContents.Name(), "metadata") {
-			processors.ProcessConfigMetadata(filePath, &processedMetadata)
+		if directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".yml" {
+			return nil
 		}
 
-		if strings.Contains(directoryContents.Name(), "severity_assessment") {
-			processors.ProcessConfigSeverityAssessment(filePath, &processedSeverityAssessment)
+		if strings.Contains(directoryContents.Name(), utilities.ConfigFileMetadata) {
+			processors.ProcessConfigMetadata(filePath, &processedMetadata, _fileCache)
+		}
+
+		if strings.Contains(directoryContents.Name(), utilities.ConfigFileSeverityAssessment) {
+			processors.ProcessConfigSeverityAssessment(filePath, &processedSeverityAssessment, _fileCache)
+		}
+
+		if strings.Contains(directoryContents.Name(), utilities.ConfigFileDirectoryOrder) {
+			processors.ProcessConfigDirectoryOrder(filePath, &processedDirectoryOrder, _fileCache)
 		}
 
 		return nil
@@ -41,197 +52,206 @@ func HandleConfigProcessor(_directory string) (utilities.MetadataYML, utilities.
 
 	utilities.ErrorChecker(errDirectoryWalk)
 
-	return processedMetadata, processedSeverityAssessment
+	return processedMetadata, processedSeverityAssessment, processedDirectoryOrder
 }
 
 /*
-HandleSeverityModifier → Recursively walks directory tree and modifies markdown files YAML frontmatter
+HandleModifications → Recursively walks directory tree and modifies markdown files
   - Walks through all subdirectories using filepath.WalkDir()
-  - For each .md file within "2_findings" or "3_suggestions" directories → modifiers.ModifySeverity()
-    -- Uses waitgroup to wait for all goroutines to finish before exiting
-    -- Uses semaphore to limit concurrent goroutines to runtime.NumCPU()*2
+  - For each .md file in findings/suggestions/risks directory:
+    -- Skips root-level files
+    -- Determines identifier prefix and reserves ID using atomic counter
+    -- Calls modifiers.ModifySeverity()
+    -- Calls modifiers.ModifyIdentifiers()
+  - Uses waitgroup to coordinate all concurrent modifications
   - Handles errors via utilities.ErrorChecker()
 */
-func HandleSeverityModifier(_directory string, _severityAssessment utilities.SeverityAssessmentYML) {
+func HandleModifications(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) {
 	var waitGroup sync.WaitGroup
-	var semaphore = make(chan struct{}, runtime.NumCPU()*2)
+	identifierPrefixMap, identifierCounterMap, lockedFiles := _fileCache.GetIdentifierMaps()
 
-	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
-		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" {
-			return errAnonymousFunction
-		}
-
-		if strings.Contains(filePath, "2_findings") || strings.Contains(filePath, "3_suggestions") {
-			waitGroup.Add(1)
-			semaphore <- struct{}{}
-
-			go func(path string) {
-				defer waitGroup.Done()
-				defer func() { <-semaphore }()
-				modifiers.ModifySeverity(path, _severityAssessment)
-			}(filePath)
-		}
-		return nil
-	})
-
-	utilities.ErrorChecker(errDirectoryWalk)
-	waitGroup.Wait()
-}
-
-/*
-HandleIdentifierModifier → Recursively walks directory tree and modifies markdown files YAML frontmatter
-  - Walks through all subdirectories using filepath.WalkDir()
-  - For each .md file within "2_findings" or "3_suggestions" directories → modifiers.ModifyIdentifiers()
-  - Handles errors via utilities.ErrorChecker()
-  - TODO: Remove the need for the helper function ( PrefixMapHelper() )...
-  - TODO: Remove the need for the helper function ( TrackedLockedHelper() )...
-*/
-func HandleIdentifierModifier(_directory string, _metadata utilities.MetadataYML) {
-	var documentStatus string
-	var identifierPrefixMap = helpers.PrefixMapHelper(_directory)
-	var identifierCounterMap = make(map[string]*int)
-
-	if len(identifierPrefixMap) == 0 {
-		return
+	directories := []struct {
+		path string
+	}{
+		{_reportPaths.FindingsPath},
+		{_reportPaths.SuggestionsPath},
+		{_reportPaths.RisksPath},
 	}
 
-	for _, identifierPrefix := range identifierPrefixMap {
-		identifierCounterMap[identifierPrefix] = new(int)
-	}
-
-	helpers.TrackedLockedHelper(_directory, identifierPrefixMap, identifierCounterMap)
-
-	for _, documentInformation := range _metadata.DocumentInformation {
-		if documentInformation.DocumentCurrent {
-			documentStatus = documentInformation.DocumentVersioning["DocumentStatus"]
-			break
-		}
-	}
-
-	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
-		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" {
-			return errAnonymousFunction
-		}
-
-		if strings.Contains(filePath, "2_findings") || strings.Contains(filePath, "3_suggestions") {
-			identifierPrefix := identifierPrefixMap[filepath.Dir(filePath)]
-			modifiers.ModifyIdentifiers(filePath, identifierPrefix, identifierCounterMap[identifierPrefix], documentStatus)
-		}
-
-		return nil
-	})
-
-	utilities.ErrorChecker(errDirectoryWalk)
-}
-
-/*
-HandleImageModifier → Recursively walks directory tree and compresses images when document status is Release
-  - Walks through all subdirectories using filepath.WalkDir()
-  - For each .jpg, .jpeg, .png file within "Screenshots" directories → modifiers.ModifyImage()
-    -- Uses waitgroup to wait for all goroutines to finish before exiting
-    -- Uses semaphore to limit concurrent goroutines to runtime.NumCPU()*2
-  - Handles errors via utilities.ErrorChecker()
-*/
-func HandleImageModifier(_directory string, _metadata utilities.MetadataYML) {
-	var documentStatus string
-	var waitGroup sync.WaitGroup
-	var semaphore = make(chan struct{}, runtime.NumCPU()*2)
-
-	for _, documentInformation := range _metadata.DocumentInformation {
-		if documentInformation.DocumentCurrent {
-			documentStatus = documentInformation.DocumentVersioning["DocumentStatus"]
-			break
-		}
-	}
-
-	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
-		if errAnonymousFunction != nil || directoryContents.IsDir() || (strings.ToLower(filepath.Ext(directoryContents.Name())) != ".jpg" && strings.ToLower(filepath.Ext(directoryContents.Name())) != ".jpeg" && strings.ToLower(filepath.Ext(directoryContents.Name())) != ".png") {
-			return errAnonymousFunction
-		}
-
-		if strings.Contains(filePath, "Screenshots") {
-			waitGroup.Add(1)
-			semaphore <- struct{}{}
-
-			go func(path string) {
-				defer waitGroup.Done()
-				defer func() { <-semaphore }()
-				modifiers.ModifyImage(path, documentStatus)
-			}(filePath)
-		}
-		return nil
-	})
-
-	utilities.ErrorChecker(errDirectoryWalk)
-	waitGroup.Wait()
-}
-
-/*
-HandleSeverityProcessor → Recursively walks directory tree and processes markdown files for severity assessment
-  - Walks through all subdirectories using filepath.WalkDir()
-  - For each .md file → calls processors.ProcessSeverityMatrix()
-  - Handles errors via utilities.ErrorChecker()
-  - Returns processed YAML of type utilities.SeverityAssessmentYML
-*/
-func HandleSeverityProcessor(_directory string, _severityAssessment utilities.SeverityAssessmentYML) utilities.SeverityAssessmentYML {
-	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
-		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" {
-			return errAnonymousFunction
-		}
-
-		processors.ProcessSeverityMatrix(filePath, &_severityAssessment)
-
-		return nil
-	})
-
-	utilities.ErrorChecker(errDirectoryWalk)
-
-	return _severityAssessment
-}
-
-/*
-HandleMarkdownProcessor → Recursively walks directory tree and processes markdown files concurrently
-  - Walks through all subdirectories using filepath.WalkDir()
-  - For each .md file → calls processors.ProcessMarkdown()
-    -- Uses waitgroup to wait for all goroutines to finish before exiting
-    -- Uses mutex to safely update shared data []utilities.Markdown
-    -- Uses semaphore to limit concurrent goroutines to runtime.NumCPU()*2
-  - Handles errors via utilities.ErrorChecker()
-  - Returns processed markdown of type []utilities.Markdown
-*/
-func HandleMarkdownProcessor(_reportPath string, _directory string, _metadata utilities.MetadataYML) []utilities.MarkdownFile {
-	var waitGroup sync.WaitGroup
-	var semaphore = make(chan struct{}, runtime.NumCPU()*2)
-	var markdownChannel = make(chan utilities.MarkdownFile)
-	var processedMarkdown []utilities.MarkdownFile
-
-	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
-		if errAnonymousFunction != nil || directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" {
-			return errAnonymousFunction
-		}
-
+	for _, directory := range directories {
 		waitGroup.Add(1)
-		semaphore <- struct{}{}
 
-		go func(path string) {
+		go func(dirPath string) {
 			defer waitGroup.Done()
-			defer func() { <-semaphore }()
-			processors.ProcessMarkdown(_reportPath, path, markdownChannel, _metadata)
-		}(filePath)
 
-		return nil
-	})
+			errDirectoryWalk := filepath.WalkDir(dirPath, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
+				if errAnonymousFunction != nil {
+					return errAnonymousFunction
+				}
 
-	utilities.ErrorChecker(errDirectoryWalk)
+				if directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" || utilities.IsRootLevelFile(filePath) {
+					return nil
+				}
+
+				updatedPath := filePath
+
+				if strings.Contains(filePath, utilities.FindingsDirectory) || strings.Contains(filePath, utilities.SuggestionsDirectory) {
+					updatedPath = modifiers.ModifySeverity(filePath, _fileCache)
+				}
+
+				if len(identifierPrefixMap) == 0 {
+					return nil
+				}
+
+				prefix := identifierPrefixMap[filepath.Dir(filePath)]
+				if prefix == "" || lockedFiles[filePath] {
+					return nil
+				}
+
+				modifiers.ModifyIdentifiers(updatedPath, prefix, atomic.AddInt32(identifierCounterMap[prefix], 1), _fileCache)
+
+				return nil
+			})
+
+			utilities.ErrorChecker(errDirectoryWalk)
+
+		}(directory.path)
+	}
+
+	waitGroup.Wait()
+}
+
+/*
+HandleProcessing → Recursively walks directory tree and processes markdown files
+  - Walks through all subdirectories using filepath.WalkDir()
+  - For each .md file in summaries/findings/suggestions/risks/appendices directory:
+    -- Skips root-level files
+    -- Calls processors.ProcessMarkdown()
+  - Uses channels and collector goroutines to safely aggregate results
+  - Uses waitgroups to coordinate processing and collection phases
+  - Handles errors via utilities.ErrorChecker()
+  - Returns processed md of type utilities.SeverityMatrix, utilities.SeverityBarGraph, utilities.MarkdownFile
+*/
+func HandleProcessing(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) (utilities.SeverityMatrix, utilities.SeverityBarGraph, []utilities.MarkdownFile, []utilities.MarkdownFile, []utilities.MarkdownFile, []utilities.MarkdownFile, []utilities.MarkdownFile) {
+	var waitGroup sync.WaitGroup
+	var waitGroupCollection sync.WaitGroup
+	var processedSeverityMatrix utilities.SeverityMatrix
+	var processedSeverityBarGraph utilities.SeverityBarGraph
+	var processedSummaries, processedFindings, processedSuggestions, processedRisks, processedAppendices []utilities.MarkdownFile
+
+	severityMatrixChannel := make(chan utilities.SeverityMatrixUpdate)
+	severityBarGraphChannel := make(chan utilities.SeverityBarGraphUpdate)
+	summariesChannel := make(chan utilities.MarkdownFile)
+	findingsChannel := make(chan utilities.MarkdownFile)
+	suggestionsChannel := make(chan utilities.MarkdownFile)
+	risksChannel := make(chan utilities.MarkdownFile)
+	appendicesChannel := make(chan utilities.MarkdownFile)
+
+	directories := []struct {
+		path    string
+		channel chan utilities.MarkdownFile
+		target  *[]utilities.MarkdownFile
+	}{
+		{_reportPaths.SummariesPath, summariesChannel, &processedSummaries},
+		{_reportPaths.FindingsPath, findingsChannel, &processedFindings},
+		{_reportPaths.SuggestionsPath, suggestionsChannel, &processedSuggestions},
+		{_reportPaths.RisksPath, risksChannel, &processedRisks},
+		{_reportPaths.AppendicesPath, appendicesChannel, &processedAppendices},
+	}
+
+	waitGroupCollection.Add(len(directories) + 2)
 
 	go func() {
-		waitGroup.Wait()
-		close(markdownChannel)
+		defer waitGroupCollection.Done()
+		for severity := range severityMatrixChannel {
+			if processedSeverityMatrix.Matrix[severity.RowIndex][severity.ColumnIndex] == "" {
+				processedSeverityMatrix.Matrix[severity.RowIndex][severity.ColumnIndex] = severity.FindingID
+			} else {
+				processedSeverityMatrix.Matrix[severity.RowIndex][severity.ColumnIndex] += ", " + severity.FindingID
+			}
+		}
 	}()
 
-	for markdown := range markdownChannel {
-		processedMarkdown = append(processedMarkdown, markdown)
+	go func() {
+		defer waitGroupCollection.Done()
+		for update := range severityBarGraphChannel {
+			processedSeverityBarGraph.Total++
+
+			switch update.Status {
+			case "Resolved":
+				processedSeverityBarGraph.Resolved++
+			case "Unresolved":
+				processedSeverityBarGraph.Unresolved++
+
+				switch update.Severity {
+				case "Low":
+					processedSeverityBarGraph.Low++
+				case "Medium":
+					processedSeverityBarGraph.Medium++
+				case "High":
+					processedSeverityBarGraph.High++
+				case "Critical":
+					processedSeverityBarGraph.Critical++
+				}
+			}
+		}
+	}()
+
+	for _, directory := range directories {
+		go func(channel chan utilities.MarkdownFile, target *[]utilities.MarkdownFile) {
+			defer waitGroupCollection.Done()
+			for markdown := range channel {
+				*target = append(*target, markdown)
+			}
+		}(directory.channel, directory.target)
 	}
 
-	return processedMarkdown
+	for _, directory := range directories {
+		waitGroup.Add(1)
+
+		go func(dirPath string, markdownChannel chan utilities.MarkdownFile) {
+			defer waitGroup.Done()
+
+			errDirectoryWalk := filepath.WalkDir(dirPath, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
+				if errAnonymousFunction != nil {
+					return errAnonymousFunction
+				}
+
+				if directoryContents.IsDir() || filepath.Ext(directoryContents.Name()) != ".md" || utilities.IsRootLevelFile(filePath) {
+					return nil
+				}
+
+				markdownFile, severityMatrixUpdate, severityBarGraphUpdate := processors.ProcessMarkdown(filePath, _fileCache)
+
+				markdownChannel <- markdownFile
+
+				if strings.Contains(filePath, utilities.FindingsDirectory) {
+					if _fileCache.SeverityConfig.ConductSeverityAssessment && severityMatrixUpdate != nil {
+						severityMatrixChannel <- *severityMatrixUpdate
+					}
+
+					if _fileCache.SeverityConfig.DisplaySeverityBarGraph && severityBarGraphUpdate != nil {
+						severityBarGraphChannel <- *severityBarGraphUpdate
+					}
+				}
+
+				return nil
+			})
+
+			utilities.ErrorChecker(errDirectoryWalk)
+
+		}(directory.path, directory.channel)
+	}
+
+	waitGroup.Wait()
+
+	close(severityMatrixChannel)
+	close(severityBarGraphChannel)
+	for _, directory := range directories {
+		close(directory.channel)
+	}
+
+	waitGroupCollection.Wait()
+
+	return processedSeverityMatrix, processedSeverityBarGraph, processedSummaries, processedFindings, processedSuggestions, processedRisks, processedAppendices
 }
