@@ -18,8 +18,7 @@ import (
 
 /*
 GenerateHTML → Generate final HTML report from processed report data
-  - Sorts findings and suggestions slice's by directory name (primary) and filename (secondary) for consistent ordering
-  - Parses "template.html" file and creates "Report.html"
+  - Parses "template.html" file and creates ".html"
   - Handles errors via utilities.ErrorChecker()
 */
 func GenerateHTML(_reportData utilities.ReportData, _reportPaths utilities.ReportPaths) {
@@ -34,8 +33,9 @@ func GenerateHTML(_reportData utilities.ReportData, _reportPaths utilities.Repor
 	templateHTML, errTemplateHTML := template.New("template.html").Funcs(templateFunctionMap).ParseFiles(_reportPaths.TemplatePath)
 	utilities.ErrorChecker(errTemplateHTML)
 
-	createHTML, errCreateHTML := os.Create("Report.html")
+	createHTML, errCreateHTML := os.Create(_reportData.MetadataConfig.DocumentName + ".html")
 	utilities.ErrorChecker(errCreateHTML)
+
 	defer createHTML.Close()
 
 	utilities.ErrorChecker(templateHTML.Execute(createHTML, _reportData))
@@ -47,12 +47,12 @@ GeneratePDF → Generate final PDF report from processed report data
   - Performs system-specific configuration on:
     -- Windows systems - Detects Microsoft Edge and uses as Chromium executable
     -- CICD / Action systems - Adds no-sandbox flag when running in CICD/Action
-  - Parses "Report.html" file and creates "Report.pdf
+  - Parses ".html" file and creates ".pdf"
   - Handles errors via utilities.ErrorChecker()
   - TODO: Check if there is a way to get windows path from registry for known chromium binaries
 */
-func GeneratePDF(_reportPaths utilities.ReportPaths) {
-	var PDFBuffer []byte
+func GeneratePDF(_reportData utilities.ReportData, _reportPaths utilities.ReportPaths) {
+	var buffer []byte
 
 	chromiumExecutionOptions := []chromedp.ExecAllocatorOption{
 		chromedp.Flag("headless", true),
@@ -72,7 +72,7 @@ func GeneratePDF(_reportPaths utilities.ReportPaths) {
 			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
 		}
 		for _, path := range edgePaths {
-			if _, err := os.Stat(path); err == nil {
+			if _, errStatCheck := os.Stat(path); errStatCheck == nil {
 				chromiumExecutionOptions = append(chromiumExecutionOptions, chromedp.ExecPath(path))
 				break
 			}
@@ -89,14 +89,14 @@ func GeneratePDF(_reportPaths utilities.ReportPaths) {
 	chromiumBrowserContext, chromiumBrowserContextCancel := chromedp.NewContext(chromiumExecutionContext)
 	defer chromiumBrowserContextCancel()
 
-	absoluteFilePath, errAbsoluteFilePath := filepath.Abs(filepath.Join("Report.html"))
+	absoluteFilePath, errAbsoluteFilePath := filepath.Abs(filepath.Join(_reportData.MetadataConfig.DocumentName + ".html"))
 	utilities.ErrorChecker(errAbsoluteFilePath)
 	fileURL := "file:///" + filepath.ToSlash(absoluteFilePath)
 
 	utilities.ErrorChecker(chromedp.Run(chromiumBrowserContext,
 		chromedp.Navigate(fileURL),
 		chromedp.ActionFunc(func(context context.Context) error {
-			print, _, errPrint := page.PrintToPDF().
+			print, _, errPrintToPDF := page.PrintToPDF().
 				WithPrintBackground(true).
 				WithMarginTop(0).
 				WithMarginBottom(0).
@@ -105,14 +105,14 @@ func GeneratePDF(_reportPaths utilities.ReportPaths) {
 				WithPreferCSSPageSize(true).
 				WithGenerateTaggedPDF(true).
 				Do(context)
-			utilities.ErrorChecker(errPrint)
+			utilities.ErrorChecker(errPrintToPDF)
 
-			PDFBuffer = print
+			buffer = print
 			return nil
 		}),
 	))
 
-	utilities.ErrorChecker(os.WriteFile(filepath.Join("Report.pdf"), PDFBuffer, 0o644))
+	utilities.ErrorChecker(os.WriteFile(filepath.Join(_reportData.MetadataConfig.DocumentName+".pdf"), buffer, 0o644))
 }
 
 /*
@@ -121,8 +121,8 @@ GenerateXLSX → Generate final XLSX spreadsheet report from processed report da
   - Processes findings collection by:
     -- Creating worksheet per directory (truncated to 31 characters for Excel limits)
     -- Adding headers (Finding Name, Status, Impact, Likelihood, Details) to new sheets
-    -- Sanitizing and populating finding data into appropriate rows and columns
-  - Removes default "Sheet1" and saves as "Report.xlsx"
+    -- Sanitising and populating finding data into appropriate rows and columns
+  - Removes default "Sheet1" and saves as ".xlsx"
   - Handles errors via utilities.ErrorChecker()
 */
 func GenerateXLSX(_reportData utilities.ReportData) {
@@ -132,8 +132,8 @@ func GenerateXLSX(_reportData utilities.ReportData) {
 	for _, finding := range _reportData.Findings {
 		sheetName := finding.Directory
 
-		if len(sheetName) > 31 {
-			sheetName = sheetName[:31]
+		if len(sheetName) > utilities.ExcelMaxSheetNameLength {
+			sheetName = sheetName[:utilities.ExcelMaxSheetNameLength]
 		}
 
 		if sheetNameExists, _ := outputSpreadsheet.GetSheetIndex(sheetName); sheetNameExists == -1 {
@@ -163,5 +163,5 @@ func GenerateXLSX(_reportData utilities.ReportData) {
 	}
 
 	outputSpreadsheet.DeleteSheet("Sheet1")
-	utilities.ErrorChecker(outputSpreadsheet.SaveAs("Report.xlsx"))
+	utilities.ErrorChecker(outputSpreadsheet.SaveAs(_reportData.MetadataConfig.DocumentName + ".xlsx"))
 }
