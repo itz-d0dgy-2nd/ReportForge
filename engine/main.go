@@ -6,19 +6,20 @@ import (
 	"ReportForge/engine/utilities"
 	"flag"
 	"path/filepath"
-	"sort"
 )
 
 /*
 setupArgumentParser → Configure ReportForge argument parser:
-  - Flag ( `--developmentMode` ): Account for the nested report directory due to git submodule
-  - Flag ( `--customPath` ): Account for a custom report directory
+  - Parses command-line arguments using flag.Parse()
+    -- Flag (--developmentMode): Enable development mode to account for nested report directory structure due to git submodule
+    -- Flag (--customPath): Specify custom report directory path (default: "report")
+  - Returns utilities.Arguments struct containing parsed flag values
 */
 func setupArgumentParser() utilities.Arguments {
 	var argumentsProvided utilities.Arguments
 
 	flag.BoolVar(&argumentsProvided.DevelopmentMode, "developmentMode", false, "Run in development mode")
-	flag.StringVar(&argumentsProvided.CustomMode, "customPath", "report", "Custom Path")
+	flag.StringVar(&argumentsProvided.CustomPath, "customPath", "report", "Custom Path")
 	flag.Parse()
 
 	return argumentsProvided
@@ -26,77 +27,57 @@ func setupArgumentParser() utilities.Arguments {
 
 /*
 setupReportPaths → Configure ReportForge paths, normalising them for Windows/Unix based systems:
-  - RootPath: The report file path (Default: report/* || report\*)
-  - ConfigPath: The report YAML files path (Default: report/0_report_config/* || report\0_report_config\*)
-  - TemplatePath: The report template file path (Default: report/0_report_template/* || report\0_report_template\*)
-  - SummariesPath: The report markdown files path (Default: report/1_summaries/* || report\1_summaries\*)
-  - FindingsPath: The report markdown files path (Default: report/2_findings/* || report\2_findings\*)
-  - SuggestionsPath: The report markdown files path (Default: report/3_suggestions/* || report\3_suggestions\*)
-  - RisksPath: The report markdown files path (Default: report/4_risks/* || report\4_risks\*)
-  - AppendicesPath: The report markdown files path (Default: report/5_appendices/* || report\5_appendices\*)
+  - Determines root path based on provided arguments
+  - Constructs all report subdirectory paths using filepath.Clean() and filepath.Join()
+  - Returns utilities.ReportPaths struct containing all report directory paths
 */
 func setupReportPaths(_argumentsProvided utilities.Arguments) utilities.ReportPaths {
-	rootPath := _argumentsProvided.CustomMode
+	rootPath := _argumentsProvided.CustomPath
 
 	if _argumentsProvided.DevelopmentMode {
-		rootPath = filepath.Clean(filepath.Join(rootPath, "report"))
+		rootPath = filepath.Clean(filepath.Join(utilities.RootDirectory, "report"))
 	}
 
 	return utilities.ReportPaths{
 		RootPath:        rootPath,
-		ConfigPath:      filepath.Clean(filepath.Join(rootPath, "0_report_config")),
-		TemplatePath:    filepath.Clean(filepath.Join(rootPath, "0_report_template", "html", "template.html")),
-		SummariesPath:   filepath.Clean(filepath.Join(rootPath, "1_summaries")),
-		FindingsPath:    filepath.Clean(filepath.Join(rootPath, "2_findings")),
-		SuggestionsPath: filepath.Clean(filepath.Join(rootPath, "3_suggestions")),
-		RisksPath:       filepath.Clean(filepath.Join(rootPath, "4_risks")),
-		AppendicesPath:  filepath.Clean(filepath.Join(rootPath, "5_appendices")),
+		ConfigPath:      filepath.Clean(filepath.Join(rootPath, utilities.ConfigDirectory)),
+		TemplatePath:    filepath.Clean(filepath.Join(rootPath, utilities.TemplateDirectory, "html", "template.html")),
+		SummariesPath:   filepath.Clean(filepath.Join(rootPath, utilities.SummariesDirectory)),
+		FindingsPath:    filepath.Clean(filepath.Join(rootPath, utilities.FindingsDirectory)),
+		SuggestionsPath: filepath.Clean(filepath.Join(rootPath, utilities.SuggestionsDirectory)),
+		RisksPath:       filepath.Clean(filepath.Join(rootPath, utilities.RisksDirectory)),
+		AppendicesPath:  filepath.Clean(filepath.Join(rootPath, utilities.AppendicesDirectory)),
+		ScreenshotsPath: filepath.Clean(filepath.Join(rootPath, utilities.ScreenshotsDirectory)),
 	}
 }
 
 /*
-setupReportData → Execute ReportForge handlers, modifying markdown YAML frontmatter and processing markdown data:
-  - Metadata: Recursively iterates over directory structure foreach .yml and process the content
-  - Severity: Recursively iterates over directory structure foreach .md and process the severities
-  - Summaries: Recursively iterates over directory structure foreach .md and process the summaries
-  - Findings: Recursively iterates over directory structure foreach .md and process the findings
-  - Suggestions: Recursively iterates over directory structure foreach .md and process the suggestions
-  - Risks: Recursively iterates over directory structure foreach .md and process the risks
-  - Appendices: Recursively iterates over directory structure foreach .md and process the appendices
-  - Path: The report file path, used for HTML `href=` and `src=`
+setupReportData → Execute ReportForge handlers, process config, modify and process markdown generating report data:
+  - Initialises file cache with pre-loaded markdown and config files
+  - Processes configuration files (metadata, severity assessment, directory order)
+  - Modifies markdown files (severity calculation and identifier assignment)
+  - Processes markdown files (summaries, findings, suggestions, risks, appendices)
 */
 func setupReportData(_reportPaths utilities.ReportPaths) utilities.ReportData {
-	metadata, severityAssessment := handlers.HandleConfigProcessor(_reportPaths.ConfigPath)
-
-	handlers.HandleSeverityModifier(_reportPaths.FindingsPath, severityAssessment)
-	handlers.HandleIdentifierModifier(_reportPaths.RootPath, metadata)
-	handlers.HandleImageModifier(_reportPaths.RootPath, metadata)
+	fileCache := utilities.NewFileCache(_reportPaths.RootPath)
+	metadataConfig, severityConfig, directoryConfig := handlers.HandleConfigProcessor(_reportPaths, fileCache)
+	utilities.DocumentStatus = metadataConfig.DocumentInformation[len(metadataConfig.DocumentInformation)-1].DocumentVersioning["DocumentStatus"]
+	handlers.HandleModifications(_reportPaths, fileCache)
+	severityMatrix, severityBarGraph, summaries, findings, suggestions, risks, appendices := handlers.HandleProcessing(_reportPaths, fileCache)
 
 	return utilities.ReportData{
-		Metadata:    metadata,
-		Severity:    handlers.HandleSeverityProcessor(_reportPaths.FindingsPath, severityAssessment),
-		Summaries:   handlers.HandleMarkdownProcessor(_reportPaths.RootPath, _reportPaths.SummariesPath, metadata),
-		Findings:    handlers.HandleMarkdownProcessor(_reportPaths.RootPath, _reportPaths.FindingsPath, metadata),
-		Suggestions: handlers.HandleMarkdownProcessor(_reportPaths.RootPath, _reportPaths.SuggestionsPath, metadata),
-		Risks:       handlers.HandleMarkdownProcessor(_reportPaths.RootPath, _reportPaths.RisksPath, metadata),
-		Appendices:  handlers.HandleMarkdownProcessor(_reportPaths.RootPath, _reportPaths.AppendicesPath, metadata),
-		Path:        _reportPaths.RootPath,
+		MetadataConfig:   metadataConfig,
+		SeverityConfig:   severityConfig,
+		DirectoryConfig:  directoryConfig,
+		SeverityMatrix:   severityMatrix,
+		SeverityBarGraph: severityBarGraph,
+		Summaries:        summaries,
+		Findings:         findings,
+		Suggestions:      suggestions,
+		Risks:            risks,
+		Appendices:       appendices,
+		Path:             _reportPaths.RootPath,
 	}
-}
-
-/*
-setupMarkdownSorting → Sorts ReportForge data alphabetically by directory and then by filename:
-  - Sorts Directory field in ascending order
-  - Sorts FileName field in ascending order
-  - Modifies the slice in-place
-*/
-func setupMarkdownSorting(_markdown []utilities.MarkdownFile) {
-	sort.Slice(_markdown, func(i, j int) bool {
-		if _markdown[i].Directory != _markdown[j].Directory {
-			return _markdown[i].Directory < _markdown[j].Directory
-		}
-		return _markdown[i].FileName < _markdown[j].FileName
-	})
 }
 
 func main() {
@@ -104,11 +85,14 @@ func main() {
 	reportPaths := setupReportPaths(argumentsParsed)
 	reportData := setupReportData(reportPaths)
 
-	setupMarkdownSorting(reportData.Findings)
-	setupMarkdownSorting(reportData.Suggestions)
-	setupMarkdownSorting(reportData.Risks)
+	utilities.SortSeverityMatrix(&reportData.SeverityMatrix)
+	utilities.SortReportData(reportData.Summaries, utilities.SummariesDirectory, reportData.DirectoryConfig)
+	utilities.SortReportData(reportData.Findings, utilities.FindingsDirectory, reportData.DirectoryConfig)
+	utilities.SortReportData(reportData.Suggestions, utilities.SuggestionsDirectory, reportData.DirectoryConfig)
+	utilities.SortReportData(reportData.Risks, utilities.RisksDirectory, reportData.DirectoryConfig)
+	utilities.OptimiseImagesForPDF(reportPaths.ScreenshotsPath)
 
 	generators.GenerateHTML(reportData, reportPaths)
-	generators.GeneratePDF(reportPaths)
+	generators.GeneratePDF(reportData, reportPaths)
 	generators.GenerateXLSX(reportData)
 }
