@@ -1,15 +1,54 @@
 package utilities
 
-import "regexp"
+import (
+	"regexp"
+	"sync"
+)
 
-var RegexYamlMatch = regexp.MustCompile(`(?s)^---\n(.*?)\n---(?:\n(.*))?$`)
+const (
+	RootDirectory                 string = "report"
+	ConfigDirectory               string = "0_report_config"
+	TemplateDirectory             string = "0_report_template"
+	SummariesDirectory            string = "1_summaries"
+	FindingsDirectory             string = "2_findings"
+	SuggestionsDirectory          string = "3_suggestions"
+	RisksDirectory                string = "4_risks"
+	AppendicesDirectory           string = "5_appendices"
+	ScreenshotsDirectory          string = "Screenshots"
+	ScreenshotsOriginalsDirectory string = "originals"
+)
+
+const (
+	ReportStatusDraft   string = "Draft"
+	ReportStatusRelease string = "Release"
+)
+
+const (
+	ConfigFileMetadata           string = "metadata"
+	ConfigFileSeverityAssessment string = "severity_assessment"
+	ConfigFileDirectoryOrder     string = "directory_order"
+)
+
+const (
+	ImageCompressionQuality int = 75
+	MaxIdentifierPrefixes   int = 26
+	ExcelMaxSheetNameLength int = 31
+	PDFOptimalImageWidth    int = 1200
+)
+
+var DocumentStatus string
+
+var RegexYamlMatch = regexp.MustCompile(`(?s)^---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n(.*))?$`)
+var RegexFindingSeverity = regexp.MustCompile(`(FindingSeverity:\s*)\w+`)
 var RegexTokenMatch = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`)
+var RegexMarkdownRetestMatch = regexp.MustCompile(`<p><(/?)(retest_)(fixed|not_fixed)></p>`)
 var RegexMarkdownImageMatch = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>`)
 var RegexMarkdownImageMatchScale = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}`)
 
 type Arguments struct {
+	RebuildCache    bool
 	DevelopmentMode bool
-	CustomMode      string
+	CustomPath      string
 }
 
 type ReportPaths struct {
@@ -21,29 +60,21 @@ type ReportPaths struct {
 	SuggestionsPath string
 	RisksPath       string
 	AppendicesPath  string
+	ScreenshotsPath string
 }
 
-type MarkdownFile struct {
-	Directory string
-	FileName  string
-	Headers   MarkdownYML
-	Body      string
-}
-
-type ReportData struct {
-	Metadata    MetadataYML
-	Severity    SeverityAssessmentYML
-	Summaries   []MarkdownFile
-	Findings    []MarkdownFile
-	Suggestions []MarkdownFile
-	Risks       []MarkdownFile
-	Appendices  []MarkdownFile
-	Path        string
+type FileCache struct {
+	cache           map[string][]byte
+	mutex           sync.RWMutex
+	MetadataConfig  MetadataYML
+	SeverityConfig  SeverityAssessmentYML
+	DirectoryConfig DirectoryOrderYML
 }
 
 type MetadataYML struct {
 	Client              string            `yaml:"Client"`
 	TargetInformation   map[string]string `yaml:"TargetInformation"`
+	DocumentName        string            `yaml:"DocumentName"`
 	DocumentInformation []struct {
 		DocumentCurrent    bool              `yaml:"DocumentCurrent"`
 		DocumentVersioning map[string]string `yaml:"DocumentVersioning"`
@@ -61,10 +92,50 @@ type SeverityAssessmentYML struct {
 	Likelihoods               []string     `yaml:"Likelihoods"`
 	Severities                []string     `yaml:"Severities"`
 	CalculatedMatrix          [5][5]string `yaml:"CalculatedMatrix"`
-	Matrix                    [5][5]string `yaml:"Matrix"`
+}
+
+type DirectoryOrderYML struct {
+	Summaries   []string `yaml:"Summaries"`
+	Findings    []string `yaml:"Findings"`
+	Suggestions []string `yaml:"Suggestions"`
+	Risks       []string `yaml:"Risks"`
+}
+
+type SeverityMatrixUpdate struct {
+	RowIndex    int
+	ColumnIndex int
+	FindingID   string
+}
+
+type SeverityMatrix struct {
+	Matrix [5][5]string
+}
+
+type SeverityBarGraphUpdate struct {
+	Severity string
+	Status   string
+}
+
+type SeverityBarGraph struct {
+	Low        int
+	Medium     int
+	High       int
+	Critical   int
+	Total      int
+	Resolved   int
+	Unresolved int
+}
+
+type MarkdownFile struct {
+	Directory string
+	FileName  string
+	Headers   MarkdownYML
+	Body      string
 }
 
 type MarkdownYML struct {
+	ReportSummaryName        string `yaml:"ReportSummaryName"`
+	ReportSummaryTitle       string `yaml:"ReportSummaryTitle"`
 	ReportSummariesAuthor    string `yaml:"ReportSummariesAuthor"`
 	ReportSummariesReviewers string `yaml:"ReportSummariesReviewers"`
 	FindingID                string `yaml:"FindingID"`
@@ -87,20 +158,33 @@ type MarkdownYML struct {
 	RiskID                   string `yaml:"RiskID"`
 	RiskIDLocked             bool   `yaml:"RiskIDLocked"`
 	RiskName                 string `yaml:"RiskName"`
-	RiskDescription          string `yaml:"RiskDescription"`
-	RiskDrivers              string `yaml:"RiskDrivers"`
-	RiskConsequences         string `yaml:"RiskConsequences"`
-	RiskGrossLikelihood      string `yaml:"RiskGrossLikelihood"`
+	RiskTitle                string `yaml:"RiskTitle"`
+	RiskStatus               string `yaml:"RiskStatus"`
 	RiskGrossImpact          string `yaml:"RiskGrossImpact"`
+	RiskGrossLikelihood      string `yaml:"RiskGrossLikelihood"`
 	RiskGrossRating          string `yaml:"RiskGrossRating"`
-	RiskRecommendedControls  string `yaml:"RiskRecommendedControls"`
-	RiskOwner                string `yaml:"RiskOwner"`
-	RiskTargetLikelihood     string `yaml:"RiskTargetLikelihood"`
 	RiskTargetImpact         string `yaml:"RiskTargetImpact"`
+	RiskTargetLikelihood     string `yaml:"RiskTargetLikelihood"`
 	RiskTargetRating         string `yaml:"RiskTargetRating"`
+	RiskAuthor               string `yaml:"RiskAuthor"`
+	RiskReviewers            string `yaml:"RiskReviewers"`
 	AppendixName             string `yaml:"AppendixName"`
 	AppendixTitle            string `yaml:"AppendixTitle"`
 	AppendixStatus           string `yaml:"AppendixStatus"`
 	AppendixAuthor           string `yaml:"AppendixAuthor"`
 	AppendixReviewers        string `yaml:"AppendixReviewers"`
+}
+
+type ReportData struct {
+	MetadataConfig   MetadataYML
+	SeverityConfig   SeverityAssessmentYML
+	DirectoryConfig  DirectoryOrderYML
+	SeverityMatrix   SeverityMatrix
+	SeverityBarGraph SeverityBarGraph
+	Summaries        []MarkdownFile
+	Findings         []MarkdownFile
+	Suggestions      []MarkdownFile
+	Risks            []MarkdownFile
+	Appendices       []MarkdownFile
+	Path             string
 }
