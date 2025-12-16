@@ -176,22 +176,17 @@ func HandleProcessing(_reportPaths utilities.ReportPaths, _fileCache *utilities.
 		defer waitGroupCollection.Done()
 		for update := range severityBarGraphChannel {
 			processedSeverityBarGraph.Total++
-
 			switch update.Status {
 			case "Resolved":
 				processedSeverityBarGraph.Resolved++
 			case "Unresolved":
 				processedSeverityBarGraph.Unresolved++
 
-				switch update.Severity {
-				case "Low":
-					processedSeverityBarGraph.Low++
-				case "Medium":
-					processedSeverityBarGraph.Medium++
-				case "High":
-					processedSeverityBarGraph.High++
-				case "Critical":
-					processedSeverityBarGraph.Critical++
+				if update.Severity != "" {
+					if processedSeverityBarGraph.Severities == nil {
+						processedSeverityBarGraph.Severities = make(map[string]int)
+					}
+					processedSeverityBarGraph.Severities[update.Severity]++
 				}
 			}
 		}

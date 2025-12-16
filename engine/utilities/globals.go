@@ -39,7 +39,7 @@ const (
 var DocumentStatus string
 
 var RegexYamlMatch = regexp.MustCompile(`(?s)^---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n(.*))?$`)
-var RegexFindingSeverity = regexp.MustCompile(`(FindingSeverity:\s*)\w+`)
+var RegexFindingSeverity = regexp.MustCompile(`FindingSeverity:[^\n]*`)
 var RegexTokenMatch = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`)
 var RegexMarkdownRetestMatch = regexp.MustCompile(`<p><(/?)(retest_)(fixed|not_fixed)></p>`)
 var RegexMarkdownImageMatch = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>`)
@@ -117,10 +117,7 @@ type SeverityBarGraphUpdate struct {
 }
 
 type SeverityBarGraph struct {
-	Low        int
-	Medium     int
-	High       int
-	Critical   int
+	Severities map[string]int
 	Total      int
 	Resolved   int
 	Unresolved int
