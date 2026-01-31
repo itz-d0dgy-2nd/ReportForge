@@ -21,7 +21,7 @@ GenerateHTML → Generate final HTML report from processed report data
   - Parses "template.html" file and creates ".html"
   - Handles errors via utilities.ErrorChecker()
 */
-func GenerateHTML(_reportData utilities.ReportData, _reportPaths utilities.ReportPaths) {
+func GenerateHTML(_fileCache *utilities.FileCache, _reportPaths utilities.ReportPaths) {
 	templateFunctionMap := template.FuncMap{
 		"inc":   func(i int) int { return i + 1 },
 		"dec":   func(i int) int { return i - 1 },
@@ -33,12 +33,12 @@ func GenerateHTML(_reportData utilities.ReportData, _reportPaths utilities.Repor
 	templateHTML, errTemplateHTML := template.New("template.html").Funcs(templateFunctionMap).ParseFiles(_reportPaths.TemplatePath)
 	utilities.ErrorChecker(errTemplateHTML)
 
-	createHTML, errCreateHTML := os.Create(_reportData.MetadataConfig.DocumentName + ".html")
+	createHTML, errCreateHTML := os.Create(_fileCache.MetadataConfig.DocumentName + ".html")
 	utilities.ErrorChecker(errCreateHTML)
 
 	defer createHTML.Close()
 
-	utilities.ErrorChecker(templateHTML.Execute(createHTML, _reportData))
+	utilities.ErrorChecker(templateHTML.Execute(createHTML, _fileCache))
 }
 
 /*
@@ -51,7 +51,7 @@ GeneratePDF → Generate final PDF report from processed report data
   - Handles errors via utilities.ErrorChecker()
   - TODO: Check if there is a way to get windows path from registry for known chromium binaries
 */
-func GeneratePDF(_reportData utilities.ReportData, _reportPaths utilities.ReportPaths) {
+func GeneratePDF(_fileCache *utilities.FileCache, _reportPaths utilities.ReportPaths) {
 	var buffer []byte
 
 	chromiumExecutionOptions := []chromedp.ExecAllocatorOption{
@@ -89,7 +89,7 @@ func GeneratePDF(_reportData utilities.ReportData, _reportPaths utilities.Report
 	chromiumBrowserContext, chromiumBrowserContextCancel := chromedp.NewContext(chromiumExecutionContext)
 	defer chromiumBrowserContextCancel()
 
-	absoluteFilePath, errAbsoluteFilePath := filepath.Abs(filepath.Join(_reportData.MetadataConfig.DocumentName + ".html"))
+	absoluteFilePath, errAbsoluteFilePath := filepath.Abs(filepath.Join(_fileCache.MetadataConfig.DocumentName + ".html"))
 	utilities.ErrorChecker(errAbsoluteFilePath)
 	fileURL := "file:///" + filepath.ToSlash(absoluteFilePath)
 
@@ -112,7 +112,7 @@ func GeneratePDF(_reportData utilities.ReportData, _reportPaths utilities.Report
 		}),
 	))
 
-	utilities.ErrorChecker(os.WriteFile(filepath.Join(_reportData.MetadataConfig.DocumentName+".pdf"), buffer, 0o644))
+	utilities.ErrorChecker(os.WriteFile(filepath.Join(_fileCache.MetadataConfig.DocumentName+".pdf"), buffer, 0o644))
 }
 
 /*
@@ -125,11 +125,11 @@ GenerateXLSX → Generate final XLSX spreadsheet report from processed report da
   - Removes default "Sheet1" and saves as ".xlsx"
   - Handles errors via utilities.ErrorChecker()
 */
-func GenerateXLSX(_reportData utilities.ReportData) {
+func GenerateXLSX(_fileCache *utilities.FileCache) {
 	outputSpreadsheet := excelize.NewFile()
 	sanitiser := bluemonday.StrictPolicy()
 
-	for _, finding := range _reportData.Findings {
+	for _, finding := range _fileCache.Findings {
 		sheetName := finding.Directory
 
 		if len(sheetName) > utilities.ExcelMaxSheetNameLength {
@@ -163,5 +163,5 @@ func GenerateXLSX(_reportData utilities.ReportData) {
 	}
 
 	outputSpreadsheet.DeleteSheet("Sheet1")
-	utilities.ErrorChecker(outputSpreadsheet.SaveAs(_reportData.MetadataConfig.DocumentName + ".xlsx"))
+	utilities.ErrorChecker(outputSpreadsheet.SaveAs(_fileCache.MetadataConfig.DocumentName + ".xlsx"))
 }

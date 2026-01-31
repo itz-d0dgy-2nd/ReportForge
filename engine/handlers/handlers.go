@@ -4,11 +4,15 @@ import (
 	"ReportForge/engine/modifiers"
 	"ReportForge/engine/processors"
 	"ReportForge/engine/utilities"
+	"ReportForge/engine/validators"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"gopkg.in/yaml.v3"
 )
 
 /*
@@ -17,14 +21,11 @@ HandleConfigProcessor → Recursively walks directory tree and processes YAML co
   - For each .yml file in report_config directory:
     -- Calls processors.ProcessConfigMetadata() or,
     -- Calls processors.ProcessConfigSeverityAssessment() or,
-    -- Calls processors.ProcessConfigDirectoryOrder()
+    -- Calls processors.ProcessConfigContentOrder()
   - Handles errors via utilities.ErrorChecker()
-  - Returns processed yml of type utilities.MetadataYML, utilities.SeverityAssessmentYML, utilities.DirectoryOrderYML
+  - Returns processed yml of type utilities.MetadataYML, utilities.SeverityAssessmentYML, utilities.ContentOrderYML
 */
-func HandleConfigProcessor(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) (utilities.MetadataYML, utilities.SeverityAssessmentYML, utilities.DirectoryOrderYML) {
-	var processedMetadata utilities.MetadataYML
-	var processedSeverityAssessment utilities.SeverityAssessmentYML
-	var processedDirectoryOrder utilities.DirectoryOrderYML
+func HandleConfigs(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) {
 
 	errDirectoryWalk := filepath.WalkDir(_reportPaths.ConfigPath, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
 		if errAnonymousFunction != nil {
@@ -35,24 +36,49 @@ func HandleConfigProcessor(_reportPaths utilities.ReportPaths, _fileCache *utili
 			return nil
 		}
 
+		rawFileContent, errRawFileContent := _fileCache.ReadFile(filePath)
+		utilities.ErrorChecker(errRawFileContent)
+
 		if strings.Contains(directoryContents.Name(), utilities.ConfigFileMetadata) {
-			processors.ProcessConfigMetadata(filePath, &processedMetadata, _fileCache)
+			var tempMetadataConfig utilities.MetadataYML
+			errDecodeYAML := yaml.Unmarshal(rawFileContent, &tempMetadataConfig)
+			utilities.ErrorChecker(errDecodeYAML)
+			validators.ValidateConfigMetadata(&tempMetadataConfig, filePath)
+
+			utilities.DocumentStatus = tempMetadataConfig.DocumentInformation[len(tempMetadataConfig.DocumentInformation)-1].DocumentVersioning["DocumentStatus"]
+
+			_fileCache.MetadataConfig = tempMetadataConfig
 		}
 
 		if strings.Contains(directoryContents.Name(), utilities.ConfigFileSeverityAssessment) {
-			processors.ProcessConfigSeverityAssessment(filePath, &processedSeverityAssessment, _fileCache)
+			var tempSeverityConfig utilities.SeverityAssessmentYML
+			errDecodeYAML := yaml.Unmarshal(rawFileContent, &tempSeverityConfig)
+			utilities.ErrorChecker(errDecodeYAML)
+			validators.ValidateConfigSeverityAssessment(&tempSeverityConfig, filePath)
+
+			slices.Reverse(tempSeverityConfig.Severities)
+
+			if tempSeverityConfig.SwapImpactLikelihoodAxis {
+				slices.Reverse(tempSeverityConfig.Likelihoods)
+			} else {
+				slices.Reverse(tempSeverityConfig.Impacts)
+			}
+
+			_fileCache.SeverityConfig = tempSeverityConfig
 		}
 
-		if strings.Contains(directoryContents.Name(), utilities.ConfigFileDirectoryOrder) {
-			processors.ProcessConfigDirectoryOrder(filePath, &processedDirectoryOrder, _fileCache)
+		if strings.Contains(directoryContents.Name(), utilities.ConfigFileContentOrder) {
+			var tempContentConfig utilities.ContentOrderYML
+			errDecodeYAML := yaml.Unmarshal(rawFileContent, &tempContentConfig)
+			utilities.ErrorChecker(errDecodeYAML)
+			validators.ValidateConfigContentOrder(&tempContentConfig, filePath)
+
+			_fileCache.ContentConfig = tempContentConfig
 		}
 
 		return nil
 	})
-
 	utilities.ErrorChecker(errDirectoryWalk)
-
-	return processedMetadata, processedSeverityAssessment, processedDirectoryOrder
 }
 
 /*
@@ -132,7 +158,7 @@ HandleProcessing → Recursively walks directory tree and processes markdown fil
   - Handles errors via utilities.ErrorChecker()
   - Returns processed md of type utilities.SeverityMatrix, utilities.SeverityBarGraph, utilities.MarkdownFile
 */
-func HandleProcessing(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) (utilities.SeverityMatrix, utilities.SeverityBarGraph, []utilities.MarkdownFile, []utilities.MarkdownFile, []utilities.MarkdownFile, []utilities.MarkdownFile, []utilities.MarkdownFile) {
+func HandleProcessing(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) {
 	var waitGroup sync.WaitGroup
 	var waitGroupCollection sync.WaitGroup
 	var processedSeverityMatrix utilities.SeverityMatrix
@@ -248,5 +274,11 @@ func HandleProcessing(_reportPaths utilities.ReportPaths, _fileCache *utilities.
 
 	waitGroupCollection.Wait()
 
-	return processedSeverityMatrix, processedSeverityBarGraph, processedSummaries, processedFindings, processedSuggestions, processedRisks, processedAppendices
+	_fileCache.SeverityMatrix = processedSeverityMatrix
+	_fileCache.SeverityBarGraph = processedSeverityBarGraph
+	_fileCache.Summaries = processedSummaries
+	_fileCache.Findings = processedFindings
+	_fileCache.Suggestions = processedSuggestions
+	_fileCache.Risks = processedRisks
+	_fileCache.Appendices = processedAppendices
 }

@@ -19,14 +19,14 @@ const (
 )
 
 const (
-	ReportStatusDraft   string = "Draft"
-	ReportStatusRelease string = "Release"
+	ConfigFileMetadata           string = "metadata"
+	ConfigFileSeverityAssessment string = "severity_assessment"
+	ConfigFileContentOrder       string = "content_order"
 )
 
 const (
-	ConfigFileMetadata           string = "metadata"
-	ConfigFileSeverityAssessment string = "severity_assessment"
-	ConfigFileDirectoryOrder     string = "directory_order"
+	ReportStatusDraft   string = "Draft"
+	ReportStatusRelease string = "Release"
 )
 
 const (
@@ -36,14 +36,21 @@ const (
 	PDFOptimalImageWidth    int = 1200
 )
 
-var DocumentStatus string
+const (
+	FindingsStatusUnresolved string = "Unresolved"
+	FindingsStatusResolved   string = "Resolved"
+)
 
-var RegexYamlMatch = regexp.MustCompile(`(?s)^---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n(.*))?$`)
-var RegexFindingSeverity = regexp.MustCompile(`FindingSeverity:[^\n]*`)
-var RegexTokenMatch = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`)
-var RegexMarkdownRetestMatch = regexp.MustCompile(`<p><(/?)(retest_)(fixed|not_fixed)></p>`)
-var RegexMarkdownImageMatch = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>`)
-var RegexMarkdownImageMatchScale = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}`)
+var (
+	RegexYamlMatch               = regexp.MustCompile(`(?s)^---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n(.*))?$`)
+	RegexFindingSeverity         = regexp.MustCompile(`FindingSeverity:[^\n]*`)
+	RegexTokenMatch              = regexp.MustCompile(`\B!([A-Za-z][A-Za-z0-9_]*)\b`)
+	RegexMarkdownRetestMatch     = regexp.MustCompile(`<p><(/?)(retest_)(fixed|not_fixed)></p>`)
+	RegexMarkdownImageMatch      = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>`)
+	RegexMarkdownImageMatchScale = regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}`)
+)
+
+var DocumentStatus string
 
 type Arguments struct {
 	RebuildCache    bool
@@ -64,11 +71,19 @@ type ReportPaths struct {
 }
 
 type FileCache struct {
-	cache           map[string][]byte
-	mutex           sync.RWMutex
-	MetadataConfig  MetadataYML
-	SeverityConfig  SeverityAssessmentYML
-	DirectoryConfig DirectoryOrderYML
+	cache            map[string][]byte
+	mutex            sync.RWMutex
+	Path             string
+	MetadataConfig   MetadataYML
+	SeverityConfig   SeverityAssessmentYML
+	ContentConfig    ContentOrderYML
+	SeverityMatrix   SeverityMatrix
+	SeverityBarGraph SeverityBarGraph
+	Summaries        []MarkdownFile
+	Findings         []MarkdownFile
+	Suggestions      []MarkdownFile
+	Risks            []MarkdownFile
+	Appendices       []MarkdownFile
 }
 
 type MetadataYML struct {
@@ -86,7 +101,7 @@ type MetadataYML struct {
 type SeverityAssessmentYML struct {
 	ConductSeverityAssessment bool         `yaml:"ConductSeverityAssessment"`
 	DisplaySeverityMatrix     bool         `yaml:"DisplaySeverityMatrix"`
-	FlipSeverityMatrix        bool         `yaml:"FlipSeverityMatrix"`
+	SwapImpactLikelihoodAxis  bool         `yaml:"SwapImpactLikelihoodAxis"`
 	DisplaySeverityBarGraph   bool         `yaml:"DisplaySeverityBarGraph"`
 	Impacts                   []string     `yaml:"Impacts"`
 	Likelihoods               []string     `yaml:"Likelihoods"`
@@ -94,11 +109,14 @@ type SeverityAssessmentYML struct {
 	CalculatedMatrix          [5][5]string `yaml:"CalculatedMatrix"`
 }
 
-type DirectoryOrderYML struct {
-	Summaries   []string `yaml:"Summaries"`
-	Findings    []string `yaml:"Findings"`
-	Suggestions []string `yaml:"Suggestions"`
-	Risks       []string `yaml:"Risks"`
+type ContentOrderYML struct {
+	Summaries                    []string          `yaml:"Summaries"`
+	Findings                     []string          `yaml:"Findings"`
+	Suggestions                  []string          `yaml:"Suggestions"`
+	Risks                        []string          `yaml:"Risks"`
+	FindingIdentifierPrefixes    map[string]string `yaml:"FindingIdentifierPrefixes"`    // folder_name: "A"
+	SuggestionIdentifierPrefixes map[string]string `yaml:"SuggestionIdentifierPrefixes"` // folder_name: "B"
+	RiskIdentifierPrefixes       map[string]string `yaml:"RiskIdentifierPrefixes"`       // folder_name: "C"
 }
 
 type SeverityMatrixUpdate struct {
@@ -170,18 +188,4 @@ type MarkdownYML struct {
 	AppendixStatus           string `yaml:"AppendixStatus"`
 	AppendixAuthor           string `yaml:"AppendixAuthor"`
 	AppendixReviewers        string `yaml:"AppendixReviewers"`
-}
-
-type ReportData struct {
-	MetadataConfig   MetadataYML
-	SeverityConfig   SeverityAssessmentYML
-	DirectoryConfig  DirectoryOrderYML
-	SeverityMatrix   SeverityMatrix
-	SeverityBarGraph SeverityBarGraph
-	Summaries        []MarkdownFile
-	Findings         []MarkdownFile
-	Suggestions      []MarkdownFile
-	Risks            []MarkdownFile
-	Appendices       []MarkdownFile
-	Path             string
 }

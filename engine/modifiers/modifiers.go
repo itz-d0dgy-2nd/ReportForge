@@ -13,6 +13,23 @@ import (
 )
 
 /*
+parseFile → Decorator that wraps file reading with YAML validation
+  - Calls utilities.ReadAndCleanMarkdownFile() to read, strip BOM, and normalise line endings
+  - Validates YAML frontmatter and populates MarkdownYML struct
+  - Returns raw markdown content, regex matches, and parsed YAML
+*/
+func parseFile(_filePath string, _fileCache *utilities.FileCache) (string, []string, utilities.MarkdownYML) {
+	var unprocessedYaml utilities.MarkdownYML
+
+	rawMarkdownContent, regexMatches, err := utilities.ReadAndCleanMarkdownFile(_filePath, _fileCache)
+	utilities.ErrorChecker(err)
+
+	validators.ValidateYamlFrontmatter(regexMatches, _filePath, &unprocessedYaml)
+
+	return rawMarkdownContent, regexMatches, unprocessedYaml
+}
+
+/*
 ModifySeverity → Updates the FindingSeverity YAML field in markdown files based on calculated severity and renames files
   - Reads markdown file and normalises line endings to Unix format (Thanks to @bstlaurentnz for using windows)
   - Calls ValidateYamlFrontmatter()
@@ -34,16 +51,8 @@ func ModifySeverity(_filePath string, _fileCache *utilities.FileCache) string {
 	var calculatedSeverity string
 	var newFileName string
 	var fileModified bool
-	var unprocessedYaml utilities.MarkdownYML
 
-	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
-	utilities.ErrorChecker(errRawFileContent)
-
-	rawMarkdownContent := strings.ReplaceAll(string(rawFileContent), "\r\n", "\n")
-	regexMatches := utilities.RegexYamlMatch.FindStringSubmatch(rawMarkdownContent)
-
-	validators.ValidateYamlFrontmatter(regexMatches, _filePath, &unprocessedYaml)
-
+	rawMarkdownContent, _, unprocessedYaml := parseFile(_filePath, _fileCache)
 	directoryType := utilities.GetDirectoryType(_filePath)
 
 	switch directoryType {
@@ -55,7 +64,7 @@ func ModifySeverity(_filePath string, _fileCache *utilities.FileCache) string {
 			likelihoodIndex := slices.Index(_fileCache.SeverityConfig.Likelihoods, unprocessedYaml.FindingLikelihood)
 			validators.ValidateLikelihoodIndex(likelihoodIndex, _filePath)
 
-			if _fileCache.SeverityConfig.FlipSeverityMatrix {
+			if _fileCache.SeverityConfig.SwapImpactLikelihoodAxis {
 				calculatedSeverity = _fileCache.SeverityConfig.CalculatedMatrix[likelihoodIndex][impactIndex]
 			} else {
 				calculatedSeverity = _fileCache.SeverityConfig.CalculatedMatrix[impactIndex][likelihoodIndex]
@@ -120,15 +129,9 @@ func ModifyIdentifiers(_filePath, _identifierPrefix string, _reservedID int32, _
 	var identifierField string
 	var identifierLockField string
 
-	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
-	utilities.ErrorChecker(errRawFileContent)
-
-	rawMarkdownContent := strings.ReplaceAll(string(rawFileContent), "\r\n", "\n")
-	regexMatches := utilities.RegexYamlMatch.FindStringSubmatch(rawMarkdownContent)
-
-	validators.ValidateYamlFrontmatter(regexMatches, _filePath, &unprocessedYaml)
-
+	rawMarkdownContent, _, unprocessedYaml := parseFile(_filePath, _fileCache)
 	directoryType := utilities.GetDirectoryType(_filePath)
+
 	switch directoryType {
 	case utilities.FindingsDirectory:
 		identifier = strings.TrimSpace(unprocessedYaml.FindingID)
@@ -171,7 +174,11 @@ func ModifyIdentifiers(_filePath, _identifierPrefix string, _reservedID int32, _
 	}
 
 	if utilities.DocumentStatus == "Release" {
-		rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
+		if strings.Contains(rawMarkdownContent, identifierLockField+": false") {
+			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
+		} else if strings.Contains(rawMarkdownContent, identifierLockField+":") {
+			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+":", identifierLockField+": true", 1)
+		}
 	}
 
 	utilities.ErrorChecker(os.WriteFile(_filePath, []byte(rawMarkdownContent), 0644))

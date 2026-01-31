@@ -13,6 +13,24 @@ import (
 	"sync"
 )
 
+func ReadAndCleanMarkdownFile(_filePath string, _fileCache *FileCache) (string, []string, error) {
+	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
+	ErrorChecker(errRawFileContent)
+
+	// Handle Windows File Shenanigans
+	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xFF, 0xFE, 0x00, 0x00}) // UTF-32 LE BOM
+	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0x00, 0x00, 0xFE, 0xFF}) // UTF-32 BE BOM
+	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xEF, 0xBB, 0xBF})       // UTF-8 BOM
+	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xFF, 0xFE})             // UTF-16 LE BOM
+	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xFE, 0xFF})             // UTF-16 BE BOM
+	rawMarkdownContent := strings.ReplaceAll(string(rawFileContent), "\r\n", "\n")    // CRLF to LF
+	rawMarkdownContent = strings.TrimRight(rawMarkdownContent, "\t\r\n")              // Trim trailing whitespace
+
+	regexMatches := RegexYamlMatch.FindStringSubmatch(rawMarkdownContent)
+
+	return rawMarkdownContent, regexMatches, nil
+}
+
 /*
 IsRootLevelFile → Checks if file is directly in findings/suggestions/risks directory (not in subdirectory)
 */
@@ -41,25 +59,25 @@ func SortSeverityMatrix(_severityMatrix *SeverityMatrix) {
 /*
 SortReportData → Sorts ReportForge data alphabetically by directory and then by filename
 */
-func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _directoryOrder DirectoryOrderYML) {
-	var directoryOrderList []string
-	var directoryOrderMap map[string]int
+func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _ContentOrder ContentOrderYML) {
+	var ContentOrderList []string
+	var ContentOrderMap map[string]int
 
 	switch _parentDirectory {
 	case SummariesDirectory:
-		directoryOrderList = _directoryOrder.Summaries
+		ContentOrderList = _ContentOrder.Summaries
 	case FindingsDirectory:
-		directoryOrderList = _directoryOrder.Findings
+		ContentOrderList = _ContentOrder.Findings
 	case SuggestionsDirectory:
-		directoryOrderList = _directoryOrder.Suggestions
+		ContentOrderList = _ContentOrder.Suggestions
 	case RisksDirectory:
-		directoryOrderList = _directoryOrder.Risks
+		ContentOrderList = _ContentOrder.Risks
 	}
 
-	if len(directoryOrderList) > 0 {
-		directoryOrderMap = make(map[string]int, len(directoryOrderList))
-		for index, directory := range directoryOrderList {
-			directoryOrderMap[directory] = index
+	if len(ContentOrderList) > 0 {
+		ContentOrderMap = make(map[string]int, len(ContentOrderList))
+		for index, directory := range ContentOrderList {
+			ContentOrderMap[directory] = index
 		}
 	}
 
@@ -71,12 +89,12 @@ func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _director
 			return _markdown[i].FileName < _markdown[j].FileName
 		}
 
-		if directoryOrderMap == nil {
+		if ContentOrderMap == nil {
 			return directoryI < directoryJ
 		}
 
-		priorityI, orderedI := directoryOrderMap[directoryI]
-		priorityJ, orderedJ := directoryOrderMap[directoryJ]
+		priorityI, orderedI := ContentOrderMap[directoryI]
+		priorityJ, orderedJ := ContentOrderMap[directoryJ]
 
 		if orderedI && orderedJ {
 			return priorityI < priorityJ

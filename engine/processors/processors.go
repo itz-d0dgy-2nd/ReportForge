@@ -9,53 +9,23 @@ import (
 	"strings"
 
 	"github.com/russross/blackfriday/v2"
-	"gopkg.in/yaml.v3"
 )
 
 /*
-ProcessConfigMetadata → Process YAML configuration file for report metadata
-  - Reads YAML configuration file from specified file path
-  - Unmarshals YAML content into pointer *utilities.MetadataYML struct
-    -- Calls validators.ValidateConfigMetadata()
+parseFile → Decorator that wraps file reading with YAML validation
+  - Calls utilities.ReadAndCleanMarkdownFile() to read, strip BOM, and normalise line endings
+  - Validates YAML frontmatter and populates MarkdownYML struct
+  - Returns raw markdown content, regex matches, and parsed YAML
 */
-func ProcessConfigMetadata(_filePath string, _metadataConfig *utilities.MetadataYML, _fileCache *utilities.FileCache) {
-	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
-	utilities.ErrorChecker(errRawFileContent)
+func parseFile(_filePath string, _fileCache *utilities.FileCache) (string, []string, utilities.MarkdownYML) {
+	var unprocessedYaml utilities.MarkdownYML
 
-	errDecodeYAML := yaml.Unmarshal(rawFileContent, _metadataConfig)
-	utilities.ErrorChecker(errDecodeYAML)
+	rawMarkdownContent, regexMatches, err := utilities.ReadAndCleanMarkdownFile(_filePath, _fileCache)
+	utilities.ErrorChecker(err)
 
-	validators.ValidateConfigMetadata(_metadataConfig, _filePath)
-}
+	validators.ValidateYamlFrontmatter(regexMatches, _filePath, &unprocessedYaml)
 
-/*
-ProcessConfigSeverityAssessment → Process YAML configuration file for report severity assessment
-  - Reads YAML configuration file from specified file path
-  - Unmarshals YAML content into pointer *utilities.SeverityAssessmentYML struct
-    -- Calls validators.ValidateConfigSeverityAssessment()
-*/
-func ProcessConfigSeverityAssessment(_filePath string, _severityConfig *utilities.SeverityAssessmentYML, _fileCache *utilities.FileCache) {
-	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
-	utilities.ErrorChecker(errRawFileContent)
-
-	errDecodeYAML := yaml.Unmarshal(rawFileContent, _severityConfig)
-	utilities.ErrorChecker(errDecodeYAML)
-
-	validators.ValidateConfigSeverityAssessment(_severityConfig, _filePath)
-}
-
-/*
-ProcessConfigDirectoryOrder → Process YAML configuration file for directory ordering
-  - Reads YAML configuration file from specified file path
-  - Unmarshals YAML content into pointer *utilities.DirectoryOrder struct
-    --
-*/
-func ProcessConfigDirectoryOrder(_filePath string, _directoryOrder *utilities.DirectoryOrderYML, _fileCache *utilities.FileCache) {
-	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
-	utilities.ErrorChecker(errRawFileContent)
-
-	errDecodeYAML := yaml.Unmarshal(rawFileContent, _directoryOrder)
-	utilities.ErrorChecker(errDecodeYAML)
+	return rawMarkdownContent, regexMatches, unprocessedYaml
 }
 
 /*
@@ -78,13 +48,7 @@ func ProcessMarkdown(_filePath string, _fileCache *utilities.FileCache) (utiliti
 	var severityMatrixUpdate *utilities.SeverityMatrixUpdate
 	var severityBarGraphUpdate *utilities.SeverityBarGraphUpdate
 
-	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
-	utilities.ErrorChecker(errRawFileContent)
-
-	rawMarkdownContent := strings.ReplaceAll(string(rawFileContent), "\r\n", "\n")
-	regexMatches := utilities.RegexYamlMatch.FindStringSubmatch(rawMarkdownContent)
-
-	validators.ValidateYamlFrontmatter(regexMatches, _filePath, &unprocessedYaml)
+	_, regexMatches, unprocessedYaml := parseFile(_filePath, _fileCache)
 
 	unprocessedMarkdown := string(blackfriday.Run([]byte(regexMatches[2])))
 
@@ -123,20 +87,24 @@ func ProcessMarkdown(_filePath string, _fileCache *utilities.FileCache) (utiliti
 		rowIndex := impactIndex
 		columnIndex := likelihoodIndex
 
-		if _fileCache.SeverityConfig.FlipSeverityMatrix {
+		if _fileCache.SeverityConfig.SwapImpactLikelihoodAxis {
 			rowIndex = likelihoodIndex
 			columnIndex = impactIndex
 		}
 
-		severityMatrixUpdate = &utilities.SeverityMatrixUpdate{
-			RowIndex:    rowIndex,
-			ColumnIndex: columnIndex,
-			FindingID:   unprocessedYaml.FindingID,
+		if unprocessedYaml.FindingStatus != utilities.FindingsStatusResolved {
+			severityMatrixUpdate = &utilities.SeverityMatrixUpdate{
+				RowIndex:    rowIndex,
+				ColumnIndex: columnIndex,
+				FindingID:   unprocessedYaml.FindingID,
+			}
 		}
 
-		severityBarGraphUpdate = &utilities.SeverityBarGraphUpdate{
-			Severity: unprocessedYaml.FindingSeverity,
-			Status:   unprocessedYaml.FindingStatus,
+		if unprocessedYaml.FindingStatus != utilities.FindingsStatusResolved {
+			severityBarGraphUpdate = &utilities.SeverityBarGraphUpdate{
+				Severity: unprocessedYaml.FindingSeverity,
+				Status:   unprocessedYaml.FindingStatus,
+			}
 		}
 	}
 

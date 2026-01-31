@@ -58,41 +58,27 @@ setupReportData → Execute ReportForge handlers, process config, modify and pro
   - Modifies markdown files (severity calculation and identifier assignment)
   - Processes markdown files (summaries, findings, suggestions, risks, appendices)
 */
-func setupReportData(_reportPaths utilities.ReportPaths) utilities.ReportData {
+func setupReportData(_reportPaths utilities.ReportPaths) *utilities.FileCache {
 	fileCache := utilities.NewFileCache(_reportPaths.RootPath)
-	metadataConfig, severityConfig, directoryConfig := handlers.HandleConfigProcessor(_reportPaths, fileCache)
-	utilities.DocumentStatus = metadataConfig.DocumentInformation[len(metadataConfig.DocumentInformation)-1].DocumentVersioning["DocumentStatus"]
+	handlers.HandleConfigs(_reportPaths, fileCache)
 	handlers.HandleModifications(_reportPaths, fileCache)
-	severityMatrix, severityBarGraph, summaries, findings, suggestions, risks, appendices := handlers.HandleProcessing(_reportPaths, fileCache)
-
-	return utilities.ReportData{
-		MetadataConfig:   metadataConfig,
-		SeverityConfig:   severityConfig,
-		DirectoryConfig:  directoryConfig,
-		SeverityMatrix:   severityMatrix,
-		SeverityBarGraph: severityBarGraph,
-		Summaries:        summaries,
-		Findings:         findings,
-		Suggestions:      suggestions,
-		Risks:            risks,
-		Appendices:       appendices,
-		Path:             _reportPaths.RootPath,
-	}
+	handlers.HandleProcessing(_reportPaths, fileCache)
+	return fileCache
 }
 
 func main() {
 	argumentsParsed := setupArgumentParser()
 	reportPaths := setupReportPaths(argumentsParsed)
-	reportData := setupReportData(reportPaths)
+	fileCache := setupReportData(reportPaths)
 
-	utilities.SortSeverityMatrix(&reportData.SeverityMatrix)
-	utilities.SortReportData(reportData.Summaries, utilities.SummariesDirectory, reportData.DirectoryConfig)
-	utilities.SortReportData(reportData.Findings, utilities.FindingsDirectory, reportData.DirectoryConfig)
-	utilities.SortReportData(reportData.Suggestions, utilities.SuggestionsDirectory, reportData.DirectoryConfig)
-	utilities.SortReportData(reportData.Risks, utilities.RisksDirectory, reportData.DirectoryConfig)
+	utilities.SortSeverityMatrix(&fileCache.SeverityMatrix)
+	utilities.SortReportData(fileCache.Summaries, utilities.SummariesDirectory, fileCache.ContentConfig)
+	utilities.SortReportData(fileCache.Findings, utilities.FindingsDirectory, fileCache.ContentConfig)
+	utilities.SortReportData(fileCache.Suggestions, utilities.SuggestionsDirectory, fileCache.ContentConfig)
+	utilities.SortReportData(fileCache.Risks, utilities.RisksDirectory, fileCache.ContentConfig)
 	utilities.OptimiseImagesForPDF(reportPaths.ScreenshotsPath)
 
-	generators.GenerateHTML(reportData, reportPaths)
-	generators.GeneratePDF(reportData, reportPaths)
-	generators.GenerateXLSX(reportData)
+	generators.GenerateHTML(fileCache, reportPaths)
+	generators.GeneratePDF(fileCache, reportPaths)
+	generators.GenerateXLSX(fileCache)
 }

@@ -51,6 +51,29 @@ func ValidateConfigSeverityAssessment(_severityAssessment *utilities.SeverityAss
 }
 
 /*
+ValidateConfigContentOrder → Validates content order configuration values
+*/
+func ValidateConfigContentOrder(_contentOrder *utilities.ContentOrderYML, _filePath string) {
+	for _, prefix := range _contentOrder.FindingIdentifierPrefixes {
+		if strings.TrimSpace(prefix) == "" {
+			utilities.ErrorChecker(fmt.Errorf("empty finding prefix in ( %s )", _filePath))
+		}
+	}
+
+	for _, prefix := range _contentOrder.SuggestionIdentifierPrefixes {
+		if strings.TrimSpace(prefix) == "" {
+			utilities.ErrorChecker(fmt.Errorf("empty suggestion prefix in ( %s )", _filePath))
+		}
+	}
+
+	for _, prefix := range _contentOrder.RiskIdentifierPrefixes {
+		if strings.TrimSpace(prefix) == "" {
+			utilities.ErrorChecker(fmt.Errorf("empty risk prefix in ( %s )", _filePath))
+		}
+	}
+}
+
+/*
 ValidateYamlFrontmatter → Validates YAML frontmatter from regex matches
 */
 func ValidateYamlFrontmatter(_regexMatches []string, _filePath string, _unprocessedYaml *utilities.MarkdownYML) {

@@ -5,8 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -18,6 +16,7 @@ func NewFileCache(_directory string) *FileCache {
 
 	fileCache := &FileCache{
 		cache: make(map[string][]byte),
+		Path:  _directory,
 	}
 
 	errDirectoryWalk := filepath.WalkDir(_directory, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
@@ -41,8 +40,8 @@ func NewFileCache(_directory string) *FileCache {
 					yaml.Unmarshal(rawFileContent, &fileCache.MetadataConfig)
 				} else if strings.Contains(filepath.Base(path), ConfigFileSeverityAssessment) {
 					yaml.Unmarshal(rawFileContent, &fileCache.SeverityConfig)
-				} else if strings.Contains(filepath.Base(path), ConfigFileDirectoryOrder) {
-					yaml.Unmarshal(rawFileContent, &fileCache.DirectoryConfig)
+				} else if strings.Contains(filepath.Base(path), ConfigFileContentOrder) {
+					yaml.Unmarshal(rawFileContent, &fileCache.ContentConfig)
 				}
 			} else {
 				fileCache.mutex.Lock()
@@ -114,57 +113,28 @@ func (_fileCache *FileCache) GetIdentifierMaps() (map[string]string, map[string]
 		}
 	})
 
-	directories := make([]string, 0, len(subdirectories))
 	for directory := range subdirectories {
-		directories = append(directories, directory)
-	}
+		subdirectoryName := filepath.Base(directory)
+		parentDirectory := filepath.Base(filepath.Dir(directory))
 
-	sort.Slice(directories, func(i, j int) bool {
-		parentDirectoryI := filepath.Base(filepath.Dir(directories[i]))
-		parentDirectoryJ := filepath.Base(filepath.Dir(directories[j]))
-
-		if parentDirectoryI != parentDirectoryJ {
-			return parentDirectoryI < parentDirectoryJ
-		}
-
-		subdirectoryI := filepath.Base(directories[i])
-		subdirectoryJ := filepath.Base(directories[j])
-
-		var directoryOrderList []string
-		switch parentDirectoryI {
+		var prefixMap map[string]string
+		switch parentDirectory {
 		case FindingsDirectory:
-			directoryOrderList = _fileCache.DirectoryConfig.Findings
+			prefixMap = _fileCache.ContentConfig.FindingIdentifierPrefixes
 		case SuggestionsDirectory:
-			directoryOrderList = _fileCache.DirectoryConfig.Suggestions
+			prefixMap = _fileCache.ContentConfig.SuggestionIdentifierPrefixes
 		case RisksDirectory:
-			directoryOrderList = _fileCache.DirectoryConfig.Risks
+			prefixMap = _fileCache.ContentConfig.RiskIdentifierPrefixes
 		}
 
-		if len(directoryOrderList) > 0 {
-			positionI := slices.Index(directoryOrderList, subdirectoryI)
-			positionJ := slices.Index(directoryOrderList, subdirectoryJ)
-
-			if positionI != -1 && positionJ != -1 {
-				return positionI < positionJ
-			}
-			if positionI != -1 {
-				return true
-			}
-			if positionJ != -1 {
-				return false
+		if prefixMap != nil {
+			if prefix, exists := prefixMap[subdirectoryName]; exists {
+				identifierPrefixMap[directory] = prefix
+				identifierCounterMap[prefix] = new(int32)
+			} else {
+				ErrorChecker(fmt.Errorf("no identifier prefix configured for subdirectory: %s in %s", subdirectoryName, parentDirectory))
 			}
 		}
-
-		return subdirectoryI < subdirectoryJ
-	})
-
-	for index, directory := range directories {
-		if index >= MaxIdentifierPrefixes {
-			ErrorChecker(fmt.Errorf("too many subdirectories: maximum %d allowed (A-Z)", MaxIdentifierPrefixes))
-		}
-		identifierPrefix := string(rune('A' + index))
-		identifierPrefixMap[directory] = identifierPrefix
-		identifierCounterMap[identifierPrefix] = new(int32)
 	}
 
 	_fileCache.IterateCachedFiles(func(filePath string, rawFileContent []byte) {
