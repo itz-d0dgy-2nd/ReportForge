@@ -34,6 +34,6 @@ func init() {
 
 	ControlPattern = ControlPatterns{
 		Description: regexp.MustCompile(`(?s)<h3[^>]*>Control Description</h3>\s*(.+?)(?:<h3|$)`),
-		Reduces:     regexp.MustCompile(`(?s)<h3[^>]*>Reduces</h3>\s*(.+?)(?:<h3|$)`),
+		Reduces:     regexp.MustCompile(`(?s)<h3[^>]*>Control Reduces</h3>\s*(.+?)(?:<h3|$)`),
 	}
 }
