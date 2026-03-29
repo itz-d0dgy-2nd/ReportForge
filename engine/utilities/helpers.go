@@ -2,6 +2,7 @@ package utilities
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -11,38 +12,66 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"golang.org/x/image/draw"
+	"gopkg.in/yaml.v3"
 )
 
-func ReadAndCleanMarkdownFile(_filePath string, _fileCache *FileCache) (string, []string, error) {
-	rawFileContent, errRawFileContent := _fileCache.ReadFile(_filePath)
-	ErrorChecker(errRawFileContent)
+/*
+ParseFile → Parses a markdown file from the cache, extracting YAML frontmatter and body content
+*/
+func ParseFile(_path string, _fileCache *FileCache) (string, []string, MarkdownYML) {
+	var unprocessedYaml MarkdownYML
 
-	// Handle Windows File Shenanigans
-	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xFF, 0xFE, 0x00, 0x00}) // UTF-32 LE BOM
-	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0x00, 0x00, 0xFE, 0xFF}) // UTF-32 BE BOM
-	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xEF, 0xBB, 0xBF})       // UTF-8 BOM
-	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xFF, 0xFE})             // UTF-16 LE BOM
-	rawFileContent = bytes.TrimPrefix(rawFileContent, []byte{0xFE, 0xFF})             // UTF-16 BE BOM
-	rawMarkdownContent := strings.ReplaceAll(string(rawFileContent), "\r\n", "\n")    // CRLF to LF
-	rawMarkdownContent = strings.TrimRight(rawMarkdownContent, "\t\r\n")              // Trim trailing whitespace
+	rawFileContent := _fileCache.ReadFile(_path)
 
-	regexMatches := RegexYamlMatch.FindStringSubmatch(rawMarkdownContent)
+	rawMarkdownContent := strings.TrimRight(string(rawFileContent), "\t\r\n")
+	regexMatches := YAMLPattern.Frontmatter.FindStringSubmatch(rawMarkdownContent)
 
-	return rawMarkdownContent, regexMatches, nil
+	yaml.Unmarshal([]byte(regexMatches[1]), &unprocessedYaml)
+
+	return rawMarkdownContent, regexMatches, unprocessedYaml
 }
 
 /*
 IsRootLevelFile → Checks if file is directly in findings/suggestions/risks directory (not in subdirectory)
 */
-func IsRootLevelFile(_filePath string) bool {
-	return filepath.Base(filepath.Dir(_filePath)) == FindingsDirectory ||
-		filepath.Base(filepath.Dir(_filePath)) == SuggestionsDirectory ||
-		filepath.Base(filepath.Dir(_filePath)) == RisksDirectory ||
-		filepath.Base(filepath.Dir(_filePath)) == AppendicesDirectory
+func IsRootLevelFile(_path string) bool {
+	return filepath.Base(filepath.Dir(_path)) == FindingsDirectory ||
+		filepath.Base(filepath.Dir(_path)) == SuggestionsDirectory ||
+		filepath.Base(filepath.Dir(_path)) == RisksDirectory ||
+		filepath.Base(filepath.Dir(_path)) == ControlsDirectory ||
+		filepath.Base(filepath.Dir(_path)) == AppendicesDirectory
 }
 
 /*
-SortSeverityMatrix → Sorts ReportForge severity matrix finding IDs alphabetically within each cell
+GetDirectoryType → Determines directory type from file path
+*/
+func GetDirectoryType(_path string) string {
+	normalisedPath := filepath.ToSlash(_path)
+	parts := strings.Split(normalisedPath, "/")
+
+	for _, part := range parts {
+		switch part {
+		case SummariesDirectory:
+			return SummariesDirectory
+		case FindingsDirectory:
+			return FindingsDirectory
+		case SuggestionsDirectory:
+			return SuggestionsDirectory
+		case RisksDirectory:
+			return RisksDirectory
+		case ControlsDirectory:
+			return ControlsDirectory
+		case AppendicesDirectory:
+			return AppendicesDirectory
+		}
+	}
+	return ""
+}
+
+/*
+SortSeverityMatrix → Sorts severity matrix finding IDs alphabetically within each cell
 */
 func SortSeverityMatrix(_severityMatrix *SeverityMatrix) {
 	for row := 0; row < len(_severityMatrix.Matrix); row++ {
@@ -57,28 +86,62 @@ func SortSeverityMatrix(_severityMatrix *SeverityMatrix) {
 }
 
 /*
-SortReportData → Sorts ReportForge data alphabetically by directory and then by filename
+SortRiskMatrices → Sorts risk matrix risk IDs alphabetically within each cell
 */
-func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _ContentOrder ContentOrderYML) {
-	var ContentOrderList []string
-	var ContentOrderMap map[string]int
+func SortRiskMatrices(_riskMatrices *RiskMatrices) {
+	for row := 0; row < len(_riskMatrices.GrossMatrix); row++ {
+		for column := 0; column < len(_riskMatrices.GrossMatrix[row]); column++ {
+			if _riskMatrices.GrossMatrix[row][column] != "" {
+				risks := strings.Split(_riskMatrices.GrossMatrix[row][column], ", ")
+				sort.Strings(risks)
+				_riskMatrices.GrossMatrix[row][column] = strings.Join(risks, ", ")
+			}
+		}
+	}
+
+	for row := 0; row < len(_riskMatrices.TargetMatrix); row++ {
+		for column := 0; column < len(_riskMatrices.TargetMatrix[row]); column++ {
+			if _riskMatrices.TargetMatrix[row][column] != "" {
+				risks := strings.Split(_riskMatrices.TargetMatrix[row][column], ", ")
+				sort.Strings(risks)
+				_riskMatrices.TargetMatrix[row][column] = strings.Join(risks, ", ")
+			}
+		}
+	}
+}
+
+/*
+SortReportData → Sorts data alphabetically by directory and then by filename
+*/
+func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _contentOrder *ContentOrderYML) {
+	var contentOrderList []string
 
 	switch _parentDirectory {
 	case SummariesDirectory:
-		ContentOrderList = _ContentOrder.Summaries
+		contentOrderList = _contentOrder.Summaries
 	case FindingsDirectory:
-		ContentOrderList = _ContentOrder.Findings
+		contentOrderList = _contentOrder.Findings
 	case SuggestionsDirectory:
-		ContentOrderList = _ContentOrder.Suggestions
+		contentOrderList = _contentOrder.Suggestions
 	case RisksDirectory:
-		ContentOrderList = _ContentOrder.Risks
+		contentOrderList = _contentOrder.Risks
+	case ControlsDirectory:
+		contentOrderList = _contentOrder.Controls
 	}
 
-	if len(ContentOrderList) > 0 {
-		ContentOrderMap = make(map[string]int, len(ContentOrderList))
-		for index, directory := range ContentOrderList {
-			ContentOrderMap[directory] = index
-		}
+	if len(contentOrderList) == 0 {
+		sort.Slice(_markdown, func(i, j int) bool {
+			if _markdown[i].Directory == _markdown[j].Directory {
+				return _markdown[i].FileName < _markdown[j].FileName
+			}
+			return _markdown[i].Directory < _markdown[j].Directory
+		})
+		return
+	}
+
+	contentOrderMap := make(map[string]int, len(contentOrderList))
+	for index, directory := range contentOrderList {
+		contentOrderMap[directory] = index
 	}
 
 	sort.Slice(_markdown, func(i, j int) bool {
@@ -89,12 +152,8 @@ func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _ContentO
 			return _markdown[i].FileName < _markdown[j].FileName
 		}
 
-		if ContentOrderMap == nil {
-			return directoryI < directoryJ
-		}
-
-		priorityI, orderedI := ContentOrderMap[directoryI]
-		priorityJ, orderedJ := ContentOrderMap[directoryJ]
+		priorityI, orderedI := contentOrderMap[directoryI]
+		priorityJ, orderedJ := contentOrderMap[directoryJ]
 
 		if orderedI && orderedJ {
 			return priorityI < priorityJ
@@ -113,111 +172,104 @@ func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _ContentO
 }
 
 /*
-GetDirectoryType → Determines directory type from file path
+OptimiseImagesForPDF → Resizes images for PDF optimisation in Release mode only.
 */
-func GetDirectoryType(_filePath string) string {
-	switch {
-	case strings.Contains(_filePath, FindingsDirectory):
-		return FindingsDirectory
-	case strings.Contains(_filePath, SuggestionsDirectory):
-		return SuggestionsDirectory
-	case strings.Contains(_filePath, RisksDirectory):
-		return RisksDirectory
-	default:
-		return ""
-	}
-}
-
-/*
-OptimiseImagesForPDF → Resizes images for PDF optimisation in Release mode only
-*/
-func OptimiseImagesForPDF(_screenshotsPath string) {
-	var waitGroup sync.WaitGroup
-
+func OptimiseImagesForPDF(_path string) {
 	if DocumentStatus != ReportStatusRelease {
 		return
 	}
 
-	errDirectoryWalk := filepath.WalkDir(_screenshotsPath, func(filePath string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
+	var waitGroup sync.WaitGroup
+
+	errDirectoryWalk := filepath.WalkDir(_path, func(path string, directoryContents fs.DirEntry, errAnonymousFunction error) error {
 		if errAnonymousFunction != nil || directoryContents.IsDir() {
 			return errAnonymousFunction
 		}
 
-		if filepath.Base(filepath.Dir(filePath)) == ScreenshotsOriginalsDirectory {
+		if filepath.Base(filepath.Dir(path)) == ScreenshotsOriginalsDirectory {
 			return nil
 		}
 
-		currentFileExtension := strings.ToLower(filepath.Ext(directoryContents.Name()))
-
-		if currentFileExtension == ".jpg" || currentFileExtension == ".jpeg" || currentFileExtension == ".png" {
-			waitGroup.Add(1)
-
-			go func(path string) {
-				defer waitGroup.Done()
-
-				originalsDirectory := filepath.Join(filepath.Dir(path), ScreenshotsOriginalsDirectory)
-				originalBackupPath := filepath.Join(originalsDirectory, filepath.Base(path))
-
-				_, errOriginalBackupStatus := os.Stat(originalBackupPath)
-				if errOriginalBackupStatus == nil {
-					return
-				}
-
-				rawFileContent, errReadFile := os.ReadFile(path)
-				ErrorChecker(errReadFile)
-
-				decodedImage, imageFormat, errDecodedImage := image.Decode(bytes.NewReader(rawFileContent))
-				ErrorChecker(errDecodedImage)
-
-				originalBounds := decodedImage.Bounds()
-				originalWidth := originalBounds.Dx()
-
-				if originalWidth <= PDFOptimalImageWidth {
-					return
-				}
-
-				errMakeDirectory := os.MkdirAll(originalsDirectory, 0755)
-				ErrorChecker(errMakeDirectory)
-
-				errWriteBackup := os.WriteFile(originalBackupPath, rawFileContent, 0644)
-				ErrorChecker(errWriteBackup)
-
-				targetWidth := PDFOptimalImageWidth
-				targetHeight := (originalBounds.Dy() * PDFOptimalImageWidth) / originalWidth
-				resizedImage := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
-
-				for resizedImageY := 0; resizedImageY < targetHeight; resizedImageY++ {
-					for resizedImageX := 0; resizedImageX < targetWidth; resizedImageX++ {
-						resizedImage.Set(resizedImageX, resizedImageY, decodedImage.At((resizedImageX*originalWidth)/targetWidth, (resizedImageY*originalBounds.Dy())/targetHeight))
-					}
-				}
-
-				temporaryFilePath := path + ".tmp"
-				outputFile, errOutputFile := os.Create(temporaryFilePath)
-				ErrorChecker(errOutputFile)
-
-				if imageFormat == "png" {
-					ErrorChecker((&png.Encoder{CompressionLevel: png.BestCompression}).Encode(outputFile, resizedImage))
-				} else {
-					ErrorChecker(jpeg.Encode(outputFile, resizedImage, &jpeg.Options{Quality: ImageCompressionQuality}))
-				}
-
-				errCloseFile := outputFile.Close()
-				ErrorChecker(errCloseFile)
-
-				errRenameFile := os.Rename(temporaryFilePath, path)
-				if errRenameFile != nil {
-					os.Remove(temporaryFilePath)
-					os.Rename(originalBackupPath, path)
-					ErrorChecker(errRenameFile)
-				}
-
-			}(filePath)
+		extension := strings.ToLower(filepath.Ext(directoryContents.Name()))
+		if extension != ".jpg" && extension != ".jpeg" && extension != ".png" {
+			return nil
 		}
+
+		waitGroup.Add(1)
+		go func(path string) {
+			defer waitGroup.Done()
+
+			originalsDirectory := filepath.Join(filepath.Dir(path), ScreenshotsOriginalsDirectory)
+			backupPath := filepath.Join(originalsDirectory, filepath.Base(path))
+
+			if _, errStat := os.Stat(backupPath); errStat == nil {
+				return
+			}
+
+			rawFileContent, errRawFileContent := os.ReadFile(path)
+			if errRawFileContent != nil {
+				Check(NewFileSystemError(path, "failed to read image file", errRawFileContent))
+			}
+
+			decodedImage, imageFormat, errDecoding := image.Decode(bytes.NewReader(rawFileContent))
+			if errDecoding != nil {
+				Check(NewProcessingError(path, fmt.Sprintf("failed to decode image: %s", errDecoding.Error())))
+			}
+
+			originalBounds := decodedImage.Bounds()
+			originalWidth := originalBounds.Dx()
+
+			if originalWidth <= PDFOptimalImageWidth {
+				return
+			}
+
+			if errMkdir := os.MkdirAll(originalsDirectory, 0755); errMkdir != nil {
+				Check(NewFileSystemError(originalsDirectory, "failed to create originals directory", errMkdir))
+			}
+
+			if errWriteBackup := os.WriteFile(backupPath, rawFileContent, 0644); errWriteBackup != nil {
+				Check(NewFileSystemError(backupPath, "failed to write backup image", errWriteBackup))
+			}
+
+			targetWidth := PDFOptimalImageWidth
+			targetHeight := (originalBounds.Dy() * PDFOptimalImageWidth) / originalWidth
+
+			resizedImage := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
+			draw.CatmullRom.Scale(resizedImage, resizedImage.Bounds(), decodedImage, originalBounds, draw.Over, nil)
+
+			tmpPath := path + ".tmp"
+			outputFile, errCreate := os.Create(tmpPath)
+			if errCreate != nil {
+				Check(NewFileSystemError(tmpPath, "failed to create temporary image file", errCreate))
+			}
+
+			var errEncoding error
+			if imageFormat == "png" {
+				errEncoding = (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(outputFile, resizedImage)
+			} else {
+				errEncoding = jpeg.Encode(outputFile, resizedImage, &jpeg.Options{Quality: ImageCompressionQuality})
+			}
+
+			if errClose := outputFile.Close(); errEncoding == nil && errClose != nil {
+				errEncoding = errClose
+			}
+
+			if errEncoding != nil {
+				os.Remove(tmpPath)
+				Check(NewProcessingError(tmpPath, fmt.Sprintf("failed to encode image: %s", errEncoding.Error())))
+				return
+			}
+
+			if errRename := os.Rename(tmpPath, path); errRename != nil {
+				os.Remove(tmpPath)
+				os.Rename(backupPath, path)
+				Check(NewFileSystemError(path, "failed to replace original image with optimised version", errRename))
+			}
+		}(path)
 
 		return nil
 	})
 
-	ErrorChecker(errDirectoryWalk)
 	waitGroup.Wait()
+	Check(errDirectoryWalk)
 }

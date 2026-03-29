@@ -2,7 +2,6 @@ package processors
 
 import (
 	"ReportForge/engine/utilities"
-	"ReportForge/engine/validators"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -12,82 +11,61 @@ import (
 )
 
 /*
-parseFile → Decorator that wraps file reading with YAML validation
-  - Calls utilities.ReadAndCleanMarkdownFile() to read, strip BOM, and normalise line endings
-  - Validates YAML frontmatter and populates MarkdownYML struct
-  - Returns raw markdown content, regex matches, and parsed YAML
+ProcessMarkdown → Processes a markdown file with YAML frontmatter into a report-ready MarkdownFile
 */
-func parseFile(_filePath string, _fileCache *utilities.FileCache) (string, []string, utilities.MarkdownYML) {
-	var unprocessedYaml utilities.MarkdownYML
-
-	rawMarkdownContent, regexMatches, err := utilities.ReadAndCleanMarkdownFile(_filePath, _fileCache)
-	utilities.ErrorChecker(err)
-
-	validators.ValidateYamlFrontmatter(regexMatches, _filePath, &unprocessedYaml)
-
-	return rawMarkdownContent, regexMatches, unprocessedYaml
-}
-
-/*
-ProcessMarkdown → Process markdown files with YAML frontmatter for report content
-  - Reads markdown file from specified file path and normalises line endings
-  - Validates YAML frontmatter using validators.ValidateYamlFrontmatter()
-  - Converts markdown content to HTML using blackfriday processor
-  - Performs string replacements on:
-    -- Custom tokens (!Client, !TargetAsset0, !TargetAsset1)
-    -- Custom tags (<retest_fixed>, <retest_not_fixed>)
-    -- Screenshot paths to include full report path
-  - For findings specifically:
-    -- Generates severity matrix update data
-    -- Generates severity bar graph update data
-  - Returns processed markdown file and optional severity updates
-  - Handles errors via utilities.ErrorChecker()
-*/
-func ProcessMarkdown(_filePath string, _fileCache *utilities.FileCache) (utilities.MarkdownFile, *utilities.SeverityMatrixUpdate, *utilities.SeverityBarGraphUpdate) {
-	var unprocessedYaml utilities.MarkdownYML
+func ProcessMarkdown(_path string, _fileCache *utilities.FileCache) (utilities.MarkdownFile, *utilities.SeverityMatrixUpdate, *utilities.SeverityBarGraphUpdate, *utilities.RiskMatricesUpdate) {
 	var severityMatrixUpdate *utilities.SeverityMatrixUpdate
 	var severityBarGraphUpdate *utilities.SeverityBarGraphUpdate
+	var riskMatricesUpdate *utilities.RiskMatricesUpdate
 
-	_, regexMatches, unprocessedYaml := parseFile(_filePath, _fileCache)
+	_, regexMatches, unprocessedYaml := utilities.ParseFile(_path, _fileCache)
 
 	unprocessedMarkdown := string(blackfriday.Run([]byte(regexMatches[2])))
 
-	unprocessedMarkdown = utilities.RegexTokenMatch.ReplaceAllStringFunc(unprocessedMarkdown, func(tokenMatch string) string {
-		if tokenValue, exists := _fileCache.MetadataConfig.CustomVariables[strings.TrimPrefix(tokenMatch, "!")]; exists {
+	metadataConfig := _fileCache.MetadataConfig()
+
+	unprocessedMarkdown = utilities.MarkdownPattern.Token.ReplaceAllStringFunc(unprocessedMarkdown, func(tokenMatch string) string {
+		if tokenValue, exists := metadataConfig.CustomVariables[strings.TrimPrefix(tokenMatch, "!")]; exists {
 			return tokenValue
 		}
 
 		if strings.TrimPrefix(tokenMatch, "!") == "Client" {
-			return _fileCache.MetadataConfig.Client
+			return metadataConfig.Client
 		}
 
 		return tokenMatch
 	})
 
-	reportRoot := filepath.Dir(filepath.Dir(filepath.Dir(_filePath)))
-	unprocessedMarkdown = utilities.RegexMarkdownRetestMatch.ReplaceAllString(unprocessedMarkdown, "<$1$2$3>")
-	unprocessedMarkdown = utilities.RegexMarkdownImageMatchScale.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3 style="$4"/>`)
-	unprocessedMarkdown = utilities.RegexMarkdownImageMatch.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3/>`)
+	reportRoot := filepath.Dir(filepath.Dir(filepath.Dir(_path)))
+	unprocessedMarkdown = utilities.MarkdownPattern.Retest.ReplaceAllString(unprocessedMarkdown, "<$1$2$3>")
+	unprocessedMarkdown = utilities.MarkdownPattern.ImageScale.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3 style="$4"/>`)
+	unprocessedMarkdown = utilities.MarkdownPattern.Image.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3/>`)
 
 	if strings.Contains(unprocessedMarkdown, "<qa>") {
-		utilities.ErrorChecker(fmt.Errorf("%d QA comment(s) in ( %s )", strings.Count(unprocessedMarkdown, "<qa>"), _filePath))
+		count := strings.Count(unprocessedMarkdown, "<qa>")
+		utilities.Check(utilities.NewValidationWarning(
+			_path,
+			fmt.Sprintf("%d QA comment(s) found - remove before release", count),
+		))
 	}
 
 	markdownFile := utilities.MarkdownFile{
-		Directory: filepath.Base(filepath.Dir(_filePath)),
-		FileName:  filepath.Base(_filePath),
+		Directory: filepath.Base(filepath.Dir(_path)),
+		FileName:  filepath.Base(_path),
 		Headers:   unprocessedYaml,
 		Body:      unprocessedMarkdown,
 	}
 
-	if strings.Contains(_filePath, utilities.FindingsDirectory) {
-		impactIndex := slices.Index(_fileCache.SeverityConfig.Impacts, unprocessedYaml.FindingImpact)
-		likelihoodIndex := slices.Index(_fileCache.SeverityConfig.Likelihoods, unprocessedYaml.FindingLikelihood)
+	if strings.Contains(_path, utilities.FindingsDirectory) {
+		severityConfig := _fileCache.SeverityConfig()
+
+		impactIndex := slices.Index(severityConfig.Impacts, unprocessedYaml.FindingImpact)
+		likelihoodIndex := slices.Index(severityConfig.Likelihoods, unprocessedYaml.FindingLikelihood)
 
 		rowIndex := impactIndex
 		columnIndex := likelihoodIndex
 
-		if _fileCache.SeverityConfig.SwapImpactLikelihoodAxis {
+		if severityConfig.SwapImpactLikelihoodAxis {
 			rowIndex = likelihoodIndex
 			columnIndex = impactIndex
 		}
@@ -98,9 +76,7 @@ func ProcessMarkdown(_filePath string, _fileCache *utilities.FileCache) (utiliti
 				ColumnIndex: columnIndex,
 				FindingID:   unprocessedYaml.FindingID,
 			}
-		}
 
-		if unprocessedYaml.FindingStatus != utilities.FindingsStatusResolved {
 			severityBarGraphUpdate = &utilities.SeverityBarGraphUpdate{
 				Severity: unprocessedYaml.FindingSeverity,
 				Status:   unprocessedYaml.FindingStatus,
@@ -108,5 +84,23 @@ func ProcessMarkdown(_filePath string, _fileCache *utilities.FileCache) (utiliti
 		}
 	}
 
-	return markdownFile, severityMatrixUpdate, severityBarGraphUpdate
+	if strings.Contains(_path, utilities.RisksDirectory) {
+		riskConfig := _fileCache.RiskConfig()
+
+		grossImpactIndex := slices.Index(riskConfig.GrossImpacts, unprocessedYaml.RiskGrossImpact)
+		grossLikelihoodIndex := slices.Index(riskConfig.GrossLikelihoods, unprocessedYaml.RiskGrossLikelihood)
+
+		targetImpactIndex := slices.Index(riskConfig.TargetImpacts, unprocessedYaml.RiskTargetImpact)
+		targetLikelihoodIndex := slices.Index(riskConfig.TargetLikelihoods, unprocessedYaml.RiskTargetLikelihood)
+
+		riskMatricesUpdate = &utilities.RiskMatricesUpdate{
+			GrossRowIndex:     grossImpactIndex,
+			GrossColumnIndex:  grossLikelihoodIndex,
+			TargetRowIndex:    targetImpactIndex,
+			TargetColumnIndex: targetLikelihoodIndex,
+			RiskID:            unprocessedYaml.RiskID,
+		}
+	}
+
+	return markdownFile, severityMatrixUpdate, severityBarGraphUpdate, riskMatricesUpdate
 }
