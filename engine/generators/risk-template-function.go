@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-func extractRiskSection(body, sectionName string) string {
+func extractRiskSection(_body, _sectionName string) string {
 	var regex *regexp.Regexp
 
-	switch sectionName {
+	switch _sectionName {
 	case "Risk Description":
 		regex = utilities.RiskPattern.Description
 	case "Risk Drivers":
@@ -22,7 +22,7 @@ func extractRiskSection(body, sectionName string) string {
 		return ""
 	}
 
-	matches := regex.FindStringSubmatch(body)
+	matches := regex.FindStringSubmatch(_body)
 	if len(matches) > 1 {
 		return strings.TrimSpace(matches[1])
 	}
@@ -30,10 +30,10 @@ func extractRiskSection(body, sectionName string) string {
 	return ""
 }
 
-func extractControlSection(body, sectionName string) string {
+func extractControlSection(_body, _sectionName string) string {
 	var regex *regexp.Regexp
 
-	switch sectionName {
+	switch _sectionName {
 	case "Control Description":
 		regex = utilities.ControlPattern.Description
 	case "Control Reduces":
@@ -42,7 +42,7 @@ func extractControlSection(body, sectionName string) string {
 		return ""
 	}
 
-	matches := regex.FindStringSubmatch(body)
+	matches := regex.FindStringSubmatch(_body)
 	if len(matches) > 1 {
 		return strings.TrimSpace(matches[1])
 	}

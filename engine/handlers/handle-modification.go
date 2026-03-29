@@ -55,7 +55,7 @@ func assignModificationJobs(_path string, _directory string, identifierPrefixMap
 
 	var allFiles []fileInfo
 
-	filepath.WalkDir(_path, func(path string, entry fs.DirEntry, errAnonymousFunction error) error {
+	errDirectoryWalk := filepath.WalkDir(_path, func(path string, entry fs.DirEntry, errAnonymousFunction error) error {
 		if errAnonymousFunction != nil {
 			return errAnonymousFunction
 		}
@@ -95,6 +95,7 @@ func assignModificationJobs(_path string, _directory string, identifierPrefixMap
 			IsLocked:         file.isLocked,
 		}
 	}
+	utilities.Check(errDirectoryWalk)
 }
 
 /*

@@ -33,9 +33,9 @@ func updateSeverityBarGraph(_fileCache *utilities.FileCache, _update *utilities.
 	_fileCache.SeverityBarGraph.Total++
 
 	switch _update.Status {
-	case "Resolved":
+	case utilities.FindingsStatusResolved:
 		_fileCache.SeverityBarGraph.Resolved++
-	case "Unresolved":
+	case utilities.FindingsStatusUnresolved:
 		_fileCache.SeverityBarGraph.Unresolved++
 		if _update.Severity != "" {
 			_fileCache.SeverityBarGraph.Severities[_update.Severity]++
@@ -128,7 +128,7 @@ func processingWorker(_jobs <-chan utilities.ProcessingJob, _results chan<- util
 assignProcessorJobs → Walks a directory and sends processing jobs for each markdown file
 */
 func assignProcessorJobs(_path, _directory string, _jobs chan<- utilities.ProcessingJob) {
-	filepath.WalkDir(_path, func(path string, entry fs.DirEntry, errAnonymousFunction error) error {
+	errDirectoryWalk := filepath.WalkDir(_path, func(path string, entry fs.DirEntry, errAnonymousFunction error) error {
 		if errAnonymousFunction != nil {
 			return errAnonymousFunction
 		}
@@ -144,6 +144,8 @@ func assignProcessorJobs(_path, _directory string, _jobs chan<- utilities.Proces
 
 		return nil
 	})
+	utilities.Check(errDirectoryWalk)
+
 }
 
 /*
