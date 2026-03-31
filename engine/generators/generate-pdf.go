@@ -55,6 +55,7 @@ func buildChromiumOptions(_browserPath string) []chromedp.ExecAllocatorOption {
 		chromedp.Flag("disable-background-networking", true),
 		chromedp.Flag("disable-notifications", true),
 		chromedp.Flag("no-first-run", true),
+		chromedp.Flag("host-resolver-rules", "MAP * 0.0.0.0"),
 	}
 
 	if os.Getenv("ACTION") == "true" {
