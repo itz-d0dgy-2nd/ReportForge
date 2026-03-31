@@ -10,3 +10,6 @@
 
 For detailed information on this project, please read the [wiki](https://github.com/itz-d0dgy-2nd/ReportForge/wiki)  
 For detailed information about issues, planned features, and feature requests please read the [Project Roadmap](https://github.com/users/itz-d0dgy-2nd/projects/3)
+
+For the technical template - https://github.com/itz-d0dgy-2nd/ReportForge-Technical-Template
+For the securiy risk assessment template - https://github.com/itz-d0dgy-2nd/ReportForge-sra-Template
