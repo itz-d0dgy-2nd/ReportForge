@@ -1,0 +1,10 @@
+{
+  "files.exclude": {
+    "**/.vscode": true,
+    "**/.gitignore": true,
+    "**/.gitmodules": true,
+    "**/LICENSE.md": true,
+    "**/go.mod": true,
+    "**/go.sum": true,
+  }
+}

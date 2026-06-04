@@ -5,80 +5,156 @@ import (
 	"ReportForge/engine/handlers"
 	"ReportForge/engine/utilities"
 	"flag"
+	"fmt"
+	"os"
 	"path/filepath"
 )
 
 /*
-setupArgumentParser → Configure ReportForge argument parser:
-  - Parses command-line arguments using flag.Parse()
-    -- Flag (--developmentMode): Enable development mode to account for nested report directory structure due to git submodule
-    -- Flag (--customPath): Specify custom report directory path (default: "report")
-  - Returns utilities.Arguments struct containing parsed flag values
+setupArgumentParser → configures and parses ReportForge command-line arguments.
+
+Flags:
+  - --customPath: specifies custom report directory path
+  - --debug: enables debug logging
+  - --watch: enables file watcher
 */
 func setupArgumentParser() utilities.Arguments {
-	var argumentsProvided utilities.Arguments
-
-	flag.BoolVar(&argumentsProvided.DevelopmentMode, "developmentMode", false, "Run in development mode")
-	flag.StringVar(&argumentsProvided.CustomPath, "customPath", "report", "Custom Path")
+	customPath := flag.String("customPath", "", "Custom path to report directory")
+	debug := flag.Bool("debug", false, "Enable debug logging")
+	watch := flag.Bool("watch", false, "Enable file watcher")
 	flag.Parse()
 
-	return argumentsProvided
+	return utilities.Arguments{
+		CustomPath: *customPath,
+		Debug:      *debug,
+		Watch:      *watch,
+	}
 }
 
 /*
-setupReportPaths → Configure ReportForge paths, normalising them for Windows/Unix based systems:
-  - Determines root path based on provided arguments
-  - Constructs all report subdirectory paths using filepath.Clean() and filepath.Join()
-  - Returns utilities.ReportPaths struct containing all report directory paths
+setupReportTemplate → detects report template type from directory structure.
+*/
+func setupReportTemplate(_rootPath string) utilities.TemplateType {
+	var templateType utilities.TemplateType
+
+	if _, errStat := os.Stat(filepath.Join(_rootPath, utilities.FindingsDirectory)); errStat == nil {
+		templateType.Technical = true
+	}
+
+	if _, errStat := os.Stat(filepath.Join(_rootPath, utilities.RisksDirectory)); errStat == nil {
+		templateType.Sra = true
+	}
+
+	if templateType.Sra && templateType.Technical {
+		utilities.Check(utilities.NewConfigError(
+			_rootPath,
+			fmt.Sprintf("conflicting template types detected - found both '%s' and '%s' directories, but only one template type is allowed per report",
+				utilities.FindingsDirectory,
+				utilities.RisksDirectory,
+			),
+		))
+	}
+
+	if !templateType.Technical && !templateType.Sra {
+		utilities.Check(utilities.NewConfigError(
+			_rootPath,
+			fmt.Sprintf("unable to detect template type - expected either '%s' (technical) or '%s' (SRA) directory",
+				utilities.FindingsDirectory,
+				utilities.RisksDirectory,
+			),
+		))
+	}
+
+	return templateType
+}
+
+/*
+setupReportPaths → constructs and normalises all report directory paths.
 */
 func setupReportPaths(_argumentsProvided utilities.Arguments) utilities.ReportPaths {
-	rootPath := _argumentsProvided.CustomPath
+	rootPath := filepath.Clean(_argumentsProvided.CustomPath)
+	template := setupReportTemplate(rootPath)
 
-	if _argumentsProvided.DevelopmentMode {
-		rootPath = filepath.Clean(filepath.Join(utilities.RootDirectory, "report"))
+	conditionalPath := func(condition bool, dir string) string {
+		if condition {
+			return filepath.Clean(filepath.Join(rootPath, dir))
+		}
+		return ""
 	}
 
 	return utilities.ReportPaths{
 		RootPath:        rootPath,
 		ConfigPath:      filepath.Clean(filepath.Join(rootPath, utilities.ConfigDirectory)),
-		TemplatePath:    filepath.Clean(filepath.Join(rootPath, utilities.TemplateDirectory, "html", "template.html")),
+		TemplatePath:    filepath.Clean(filepath.Join(rootPath, utilities.TemplateDirectory)),
 		SummariesPath:   filepath.Clean(filepath.Join(rootPath, utilities.SummariesDirectory)),
-		FindingsPath:    filepath.Clean(filepath.Join(rootPath, utilities.FindingsDirectory)),
-		SuggestionsPath: filepath.Clean(filepath.Join(rootPath, utilities.SuggestionsDirectory)),
-		RisksPath:       filepath.Clean(filepath.Join(rootPath, utilities.RisksDirectory)),
-		AppendicesPath:  filepath.Clean(filepath.Join(rootPath, utilities.AppendicesDirectory)),
+		FindingsPath:    conditionalPath(template.Technical, utilities.FindingsDirectory),
+		SuggestionsPath: conditionalPath(template.Technical, utilities.SuggestionsDirectory),
+		RisksPath:       conditionalPath(template.Sra, utilities.RisksDirectory),
+		ControlsPath:    conditionalPath(template.Sra, utilities.ControlsDirectory),
 		ScreenshotsPath: filepath.Clean(filepath.Join(rootPath, utilities.ScreenshotsDirectory)),
+		AppendicesPath:  filepath.Clean(filepath.Join(rootPath, utilities.AppendicesDirectory)),
 	}
 }
 
 /*
-setupReportData → Execute ReportForge handlers, process config, modify and process markdown generating report data:
-  - Initialises file cache with pre-loaded markdown and config files
-  - Processes configuration files (metadata, severity assessment, directory order)
-  - Modifies markdown files (severity calculation and identifier assignment)
-  - Processes markdown files (summaries, findings, suggestions, risks, appendices)
+generateReport → generates the complete report from the current file cache state.
 */
-func setupReportData(_reportPaths utilities.ReportPaths) *utilities.FileCache {
-	fileCache := utilities.NewFileCache(_reportPaths.RootPath)
-	handlers.HandleConfigs(_reportPaths, fileCache)
-	handlers.HandleModifications(_reportPaths, fileCache)
-	handlers.HandleProcessing(_reportPaths, fileCache)
-	return fileCache
+func generateReport(_reportPaths utilities.ReportPaths, _fileCache *utilities.FileCache) {
+	_fileCache.ClearProcessedData()
+	contentConfig := _fileCache.ContentConfig()
+
+	utilities.Logger.Info("Modifying markdown")
+	handlers.HandleModifications(_reportPaths, _fileCache)
+
+	utilities.Logger.Info("Processing markdown")
+	handlers.HandleProcessing(_reportPaths, _fileCache)
+
+	utilities.Logger.Debug("Sorting matrices")
+	utilities.SortSeverityMatrix(&_fileCache.SeverityMatrix)
+	utilities.SortRiskMatrices(&_fileCache.RiskMatrices)
+
+	utilities.Logger.Debug("Sorting sections")
+	utilities.SortReportData(_fileCache.Summaries, utilities.SummariesDirectory, contentConfig)
+	utilities.SortReportData(_fileCache.Findings, utilities.FindingsDirectory, contentConfig)
+	utilities.SortReportData(_fileCache.Suggestions, utilities.SuggestionsDirectory, contentConfig)
+	utilities.SortReportData(_fileCache.Risks, utilities.RisksDirectory, contentConfig)
+	utilities.SortReportData(_fileCache.Controls, utilities.ControlsDirectory, contentConfig)
+
+	utilities.Logger.Info("Optimising images")
+	utilities.OptimiseImagesForPDF(_reportPaths.ScreenshotsPath)
+
+	utilities.Logger.Info("Generating HTML")
+	generators.GenerateHTML(_fileCache, _reportPaths)
+
+	utilities.Logger.Info("Generating PDF")
+	generators.GeneratePDF(_fileCache, _reportPaths)
+
+	utilities.Logger.Info("Generating XLSX")
+	generators.GenerateXLSX(_fileCache)
+
+	utilities.Logger.Info("report generation complete")
 }
 
 func main() {
 	argumentsParsed := setupArgumentParser()
+	utilities.NewLogger(argumentsParsed.Debug)
 	reportPaths := setupReportPaths(argumentsParsed)
-	fileCache := setupReportData(reportPaths)
+	utilities.Logger.Info("initialising file cache", "path", reportPaths.RootPath)
+	fileCache := utilities.NewFileCache(reportPaths.RootPath)
+	generateReport(reportPaths, fileCache)
 
-	utilities.SortSeverityMatrix(&fileCache.SeverityMatrix)
-	utilities.SortReportData(fileCache.Summaries, utilities.SummariesDirectory, fileCache.ContentConfig)
-	utilities.SortReportData(fileCache.Findings, utilities.FindingsDirectory, fileCache.ContentConfig)
-	utilities.SortReportData(fileCache.Suggestions, utilities.SuggestionsDirectory, fileCache.ContentConfig)
-	utilities.SortReportData(fileCache.Risks, utilities.RisksDirectory, fileCache.ContentConfig)
-	utilities.OptimiseImagesForPDF(reportPaths.ScreenshotsPath)
+	if argumentsParsed.Watch {
+		watcher, errWatcher := utilities.NewWatcher()
+		if errWatcher != nil {
+			utilities.Check(errWatcher)
+		}
+		defer watcher.Close()
 
-	generators.GenerateHTML(fileCache, reportPaths)
-	generators.GeneratePDF(fileCache, reportPaths)
-	generators.GenerateXLSX(fileCache)
+		errWatcher = watcher.WatchForChanges(reportPaths.RootPath, fileCache, func(changedFile string) {
+			generateReport(reportPaths, fileCache)
+		})
+		if errWatcher != nil {
+			utilities.Check(errWatcher)
+		}
+	}
 }

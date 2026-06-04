@@ -2,178 +2,209 @@ package modifiers
 
 import (
 	"ReportForge/engine/utilities"
-	"ReportForge/engine/validators"
 	"fmt"
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 )
 
 /*
-parseFile → Decorator that wraps file reading with YAML validation
-  - Calls utilities.ReadAndCleanMarkdownFile() to read, strip BOM, and normalise line endings
-  - Validates YAML frontmatter and populates MarkdownYML struct
-  - Returns raw markdown content, regex matches, and parsed YAML
+ModifyFindingFiles → Calculates and writes finding severity and constructs the filename
 */
-func parseFile(_filePath string, _fileCache *utilities.FileCache) (string, []string, utilities.MarkdownYML) {
-	var unprocessedYaml utilities.MarkdownYML
+func ModifyFindingFiles(_path string, _fileCache *utilities.FileCache) string {
+	var calculatedSeverity string
 
-	rawMarkdownContent, regexMatches, err := utilities.ReadAndCleanMarkdownFile(_filePath, _fileCache)
-	utilities.ErrorChecker(err)
+	rawMarkdownContent, _, unprocessedYaml := utilities.ParseFile(_path, _fileCache)
+	severityConfig := _fileCache.SeverityConfig()
 
-	validators.ValidateYamlFrontmatter(regexMatches, _filePath, &unprocessedYaml)
+	if severityConfig.ConductSeverityAssessment {
+		impactIndex := slices.Index(severityConfig.Impacts, unprocessedYaml.FindingImpact)
+		likelihoodIndex := slices.Index(severityConfig.Likelihoods, unprocessedYaml.FindingLikelihood)
 
-	return rawMarkdownContent, regexMatches, unprocessedYaml
+		if impactIndex == -1 || likelihoodIndex == -1 {
+			utilities.Check(utilities.NewValidationError(
+				_path,
+				"FindingImpact/FindingLikelihood",
+				fmt.Sprintf("invalid impact '%s' or likelihood '%s' - must match configured values", unprocessedYaml.FindingImpact, unprocessedYaml.FindingLikelihood),
+			))
+			return _path
+		}
+
+		if severityConfig.SwapImpactLikelihoodAxis {
+			calculatedSeverity = severityConfig.CalculatedMatrix[likelihoodIndex][impactIndex]
+		} else {
+			calculatedSeverity = severityConfig.CalculatedMatrix[impactIndex][likelihoodIndex]
+		}
+
+		if unprocessedYaml.FindingSeverity != calculatedSeverity {
+			rawMarkdownContent = utilities.YAMLPattern.Severity.ReplaceAllString(rawMarkdownContent, "FindingSeverity: "+calculatedSeverity)
+			if errWriteFile := os.WriteFile(_path, []byte(rawMarkdownContent), 0644); errWriteFile != nil {
+				utilities.Check(utilities.NewFileSystemError(_path, "failed to write finding file", errWriteFile))
+			}
+			_fileCache.UpdateFile(_path, []byte(rawMarkdownContent))
+		}
+
+	} else {
+		calculatedSeverity = unprocessedYaml.FindingSeverity
+	}
+
+	severityIndex := slices.Index(severityConfig.Severities, calculatedSeverity)
+	if severityIndex == -1 {
+		utilities.Check(utilities.NewValidationError(
+			_path,
+			"FindingSeverity",
+			fmt.Sprintf("severity '%s' not found in configured severity levels", calculatedSeverity),
+		))
+		return _path
+	}
+
+	newFileName := strconv.Itoa(severityIndex) + "_" + unprocessedYaml.FindingName + ".md"
+	return modifyFileName(_path, newFileName, []byte(rawMarkdownContent), _fileCache)
 }
 
 /*
-ModifySeverity → Updates the FindingSeverity YAML field in markdown files based on calculated severity and renames files
-  - Reads markdown file and normalises line endings to Unix format (Thanks to @bstlaurentnz for using windows)
-  - Calls ValidateYamlFrontmatter()
-  - Parses YAML into utilities.MarkdownYML
-  - For findings specifically:
-    -- If ConductSeverityAssessment
-    --- Calls validators.ValidateImpactIndex()
-    --- Calls validators.ValidateLikelihoodIndex()
-    --- Calculates severity from impact/likelihood matrix and Updates FindingSeverity
-    -- Validates severity index using validators.ValidateSeverityIndex()
-    -- Constructs new filename with severity prefix (e.g., "0_finding_name.md")
-  - For suggestions specifically:
-    -- Constructs new filename with standard prefix (e.g., "5_suggestion_name.md")
-  - Writes modified content to file if changes were made
-  - Renames file if filename changed, updating file cache accordingly
-  - Handles errors via utilities.ErrorChecker()
+ModifySuggestionFiles → Constructs the filename
 */
-func ModifySeverity(_filePath string, _fileCache *utilities.FileCache) string {
-	var calculatedSeverity string
-	var newFileName string
+func ModifySuggestionFiles(_path string, _fileCache *utilities.FileCache) string {
+	rawMarkdownContent, _, unprocessedYaml := utilities.ParseFile(_path, _fileCache)
+	newFileName := unprocessedYaml.SuggestionName + ".md"
+	return modifyFileName(_path, newFileName, []byte(rawMarkdownContent), _fileCache)
+}
+
+/*
+ModifyRiskFiles → Calculates and writes gross and target risk ratings and constructs the filename
+*/
+func ModifyRiskFiles(_path string, _fileCache *utilities.FileCache) string {
+	rawMarkdownContent, _, unprocessedYaml := utilities.ParseFile(_path, _fileCache)
+	riskConfig := _fileCache.RiskConfig()
+
+	grossImpactIndex := slices.Index(riskConfig.GrossImpacts, unprocessedYaml.RiskGrossImpact)
+	grossLikelihoodIndex := slices.Index(riskConfig.GrossLikelihoods, unprocessedYaml.RiskGrossLikelihood)
+	targetImpactIndex := slices.Index(riskConfig.TargetImpacts, unprocessedYaml.RiskTargetImpact)
+	targetLikelihoodIndex := slices.Index(riskConfig.TargetLikelihoods, unprocessedYaml.RiskTargetLikelihood)
+
+	if grossImpactIndex == -1 || grossLikelihoodIndex == -1 {
+		utilities.Check(utilities.NewValidationError(
+			_path,
+			"RiskGrossImpact/RiskGrossLikelihood",
+			fmt.Sprintf("invalid gross impact '%s' or likelihood '%s' - must match configured values", unprocessedYaml.RiskGrossImpact, unprocessedYaml.RiskGrossLikelihood),
+		))
+		return _path
+	}
+
+	if targetImpactIndex == -1 || targetLikelihoodIndex == -1 {
+		utilities.Check(utilities.NewValidationError(
+			_path,
+			"RiskTargetImpact/RiskTargetLikelihood",
+			fmt.Sprintf("invalid target impact '%s' or likelihood '%s' - must match configured values", unprocessedYaml.RiskTargetImpact, unprocessedYaml.RiskTargetLikelihood),
+		))
+		return _path
+	}
+
+	calculatedGrossRating := riskConfig.CalculatedGrossMatrix[grossImpactIndex][grossLikelihoodIndex]
+	calculatedTargetRating := riskConfig.CalculatedTargetMatrix[targetImpactIndex][targetLikelihoodIndex]
+
 	var fileModified bool
-
-	rawMarkdownContent, _, unprocessedYaml := parseFile(_filePath, _fileCache)
-	directoryType := utilities.GetDirectoryType(_filePath)
-
-	switch directoryType {
-	case utilities.FindingsDirectory:
-		if _fileCache.SeverityConfig.ConductSeverityAssessment {
-			impactIndex := slices.Index(_fileCache.SeverityConfig.Impacts, unprocessedYaml.FindingImpact)
-			validators.ValidateImpactIndex(impactIndex, _filePath)
-
-			likelihoodIndex := slices.Index(_fileCache.SeverityConfig.Likelihoods, unprocessedYaml.FindingLikelihood)
-			validators.ValidateLikelihoodIndex(likelihoodIndex, _filePath)
-
-			if _fileCache.SeverityConfig.SwapImpactLikelihoodAxis {
-				calculatedSeverity = _fileCache.SeverityConfig.CalculatedMatrix[likelihoodIndex][impactIndex]
-			} else {
-				calculatedSeverity = _fileCache.SeverityConfig.CalculatedMatrix[impactIndex][likelihoodIndex]
-			}
-
-			if unprocessedYaml.FindingSeverity != calculatedSeverity {
-				fileModified = true
-				rawMarkdownContent = utilities.RegexFindingSeverity.ReplaceAllString(rawMarkdownContent, "FindingSeverity: "+calculatedSeverity)
-			}
-		} else {
-			calculatedSeverity = unprocessedYaml.FindingSeverity
-		}
-
-		severityScaleIndex := slices.Index(_fileCache.SeverityConfig.Severities, calculatedSeverity)
-		validators.ValidateSeverityIndex(severityScaleIndex, _filePath)
-		newFileName = strconv.Itoa(severityScaleIndex) + "_" + unprocessedYaml.FindingName + ".md"
-
-	case utilities.SuggestionsDirectory:
-		newFileName = "5_" + unprocessedYaml.SuggestionName + ".md"
+	if unprocessedYaml.RiskGrossRating != calculatedGrossRating {
+		fileModified = true
+		rawMarkdownContent = utilities.YAMLPattern.GrossRating.ReplaceAllString(rawMarkdownContent, "RiskGrossRating: "+calculatedGrossRating)
+	}
+	if unprocessedYaml.RiskTargetRating != calculatedTargetRating {
+		fileModified = true
+		rawMarkdownContent = utilities.YAMLPattern.TargetRating.ReplaceAllString(rawMarkdownContent, "RiskTargetRating: "+calculatedTargetRating)
 	}
 
 	if fileModified {
-		utilities.ErrorChecker(os.WriteFile(_filePath, []byte(rawMarkdownContent), 0644))
-	}
-
-	newFilePath := filepath.Clean(filepath.Join(filepath.Dir(_filePath), newFileName))
-
-	if _filePath != newFilePath {
-		if os.Rename(_filePath, newFilePath) != nil {
-			utilities.ErrorChecker(fmt.Errorf("cannot rename %s to %s (possible duplicate finding name/severity)", filepath.Base(_filePath), filepath.Base(newFilePath)))
+		if errWriteFile := os.WriteFile(_path, []byte(rawMarkdownContent), 0644); errWriteFile != nil {
+			utilities.Check(utilities.NewFileSystemError(_path, "failed to write risk file", errWriteFile))
 		}
-		_fileCache.RenameFile(_filePath, newFilePath, []byte(rawMarkdownContent))
-		return newFilePath
-
-	} else if fileModified {
-		_fileCache.UpdateFile(_filePath, []byte(rawMarkdownContent))
+		_fileCache.UpdateFile(_path, []byte(rawMarkdownContent))
 	}
 
-	return _filePath
+	grossRatingIndex := slices.Index(riskConfig.GrossRiskRatings, calculatedGrossRating)
+	if grossRatingIndex == -1 {
+		utilities.Check(utilities.NewValidationError(
+			_path,
+			"RiskGrossRating",
+			fmt.Sprintf("gross rating '%s' not found in configured risk ratings", calculatedGrossRating),
+		))
+		return _path
+	}
+
+	targetRatingIndex := slices.Index(riskConfig.TargetRiskRatings, calculatedTargetRating)
+	if targetRatingIndex == -1 {
+		utilities.Check(utilities.NewValidationError(
+			_path,
+			"RiskTargetRating",
+			fmt.Sprintf("target rating '%s' not found in configured risk ratings", calculatedTargetRating),
+		))
+		return _path
+	}
+
+	newFileName := strconv.Itoa(grossRatingIndex) + "_" + unprocessedYaml.RiskName + ".md"
+	return modifyFileName(_path, newFileName, []byte(rawMarkdownContent), _fileCache)
 }
 
 /*
-ModifyIdentifiers → Updates the FindingID, SuggestionID, RiskID YAML fields based on unique identifiers
-  - Reads markdown file and normalises line endings to Unix format (Thanks to @bstlaurentnz for using windows)
-  - Calls ValidateYamlFrontmatter()
-  - Parses YAML into utilities.MarkdownYML
-  - Determines appropriate identifier field and lock field based on directory:
-    -- Findings: FindingID and FindingIDLocked
-    -- Suggestions: SuggestionID and SuggestionIDLocked
-    -- Risks: RiskID and RiskIDLocked
-  - Handles identifier assignment based on document status:
-    -- Draft status with unlocked identifier: Assigns new identifier using prefix and reserved ID
-    -- Draft status with locked identifier: Assigns new identifier using prefix and reserved ID to unlocked field
-    -- Release status: Assigns new identifier using prefix and reserved ID, Sets lock field to true for all identifiers
-  - Writes modified content to file and updates file cache
-  - Handles errors via utilities.ErrorChecker()
+ModifyControlFiles → Constructs the filename
 */
-func ModifyIdentifiers(_filePath, _identifierPrefix string, _reservedID int32, _fileCache *utilities.FileCache) {
-	var unprocessedYaml utilities.MarkdownYML
-	var identifier string
+func ModifyControlFiles(_path string, _fileCache *utilities.FileCache) string {
+	rawMarkdownContent, _, unprocessedYaml := utilities.ParseFile(_path, _fileCache)
+	newFileName := unprocessedYaml.ControlName + ".md"
+	return modifyFileName(_path, newFileName, []byte(rawMarkdownContent), _fileCache)
+}
+
+func ModifyIdentifiers(_path, _identifierPrefix string, _reservedID int32, _fileCache *utilities.FileCache) {
 	var identifierLocked bool
-	var identifierField string
 	var identifierLockField string
+	var identifierRegex *regexp.Regexp
 
-	rawMarkdownContent, _, unprocessedYaml := parseFile(_filePath, _fileCache)
-	directoryType := utilities.GetDirectoryType(_filePath)
+	rawMarkdownContent, _, unprocessedYaml := utilities.ParseFile(_path, _fileCache)
 
-	switch directoryType {
+	switch utilities.GetDirectoryType(_path) {
 	case utilities.FindingsDirectory:
-		identifier = strings.TrimSpace(unprocessedYaml.FindingID)
 		identifierLocked = unprocessedYaml.FindingIDLocked
-		identifierField = "FindingID"
 		identifierLockField = "FindingIDLocked"
+		identifierRegex = utilities.YAMLPattern.FindingID
 	case utilities.SuggestionsDirectory:
-		identifier = strings.TrimSpace(unprocessedYaml.SuggestionID)
 		identifierLocked = unprocessedYaml.SuggestionIDLocked
-		identifierField = "SuggestionID"
 		identifierLockField = "SuggestionIDLocked"
+		identifierRegex = utilities.YAMLPattern.SuggestionID
 	case utilities.RisksDirectory:
-		identifier = strings.TrimSpace(unprocessedYaml.RiskID)
 		identifierLocked = unprocessedYaml.RiskIDLocked
-		identifierField = "RiskID"
 		identifierLockField = "RiskIDLocked"
+		identifierRegex = utilities.YAMLPattern.RiskID
+	case utilities.ControlsDirectory:
+		identifierLocked = unprocessedYaml.ControlIDLocked
+		identifierLockField = "ControlIDLocked"
+		identifierRegex = utilities.YAMLPattern.ControlID
 	}
 
 	if identifierLocked {
-		if utilities.DocumentStatus != "Release" {
+		if utilities.DocumentStatus != utilities.ReportStatusRelease {
 			return
 		}
 
-		if !strings.Contains(rawMarkdownContent, identifierLockField+": false") {
+		if !strings.Contains(rawMarkdownContent, identifierLockField+": false") && !strings.Contains(rawMarkdownContent, identifierLockField+":false") {
 			return
 		}
 
 		rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
-		utilities.ErrorChecker(os.WriteFile(_filePath, []byte(rawMarkdownContent), 0644))
-		_fileCache.UpdateFile(_filePath, []byte(rawMarkdownContent))
+		if errWriteFile := os.WriteFile(_path, []byte(rawMarkdownContent), 0644); errWriteFile != nil {
+			utilities.Check(utilities.NewFileSystemError(_path, "failed to write identifier lock changes", errWriteFile))
+		}
+		_fileCache.UpdateFile(_path, []byte(rawMarkdownContent))
 		return
 	}
 
 	generatedIdentifier := fmt.Sprintf("%s%d", _identifierPrefix, _reservedID)
+	rawMarkdownContent = identifierRegex.ReplaceAllString(rawMarkdownContent, "${1}"+generatedIdentifier)
 
-	if identifier == "" {
-		rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierField+":", identifierField+": "+generatedIdentifier, 1)
-	} else {
-		rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierField+": "+identifier, identifierField+": "+generatedIdentifier, 1)
-	}
-
-	if utilities.DocumentStatus == "Release" {
+	if utilities.DocumentStatus == utilities.ReportStatusRelease {
 		if strings.Contains(rawMarkdownContent, identifierLockField+": false") {
 			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
 		} else if strings.Contains(rawMarkdownContent, identifierLockField+":") {
@@ -181,6 +212,29 @@ func ModifyIdentifiers(_filePath, _identifierPrefix string, _reservedID int32, _
 		}
 	}
 
-	utilities.ErrorChecker(os.WriteFile(_filePath, []byte(rawMarkdownContent), 0644))
-	_fileCache.UpdateFile(_filePath, []byte(rawMarkdownContent))
+	if errWriteFile := os.WriteFile(_path, []byte(rawMarkdownContent), 0644); errWriteFile != nil {
+		utilities.Check(utilities.NewFileSystemError(_path, "failed to write identifier changes", errWriteFile))
+	}
+	_fileCache.UpdateFile(_path, []byte(rawMarkdownContent))
+}
+
+/*
+modifyFileName → Renames file and updates cache if filename changes
+*/
+func modifyFileName(_path, _newFileName string, _fileContent []byte, _fileCache *utilities.FileCache) string {
+	newFilePath := filepath.Clean(filepath.Join(filepath.Dir(_path), _newFileName))
+
+	if _path != newFilePath {
+		if errRename := os.Rename(_path, newFilePath); errRename != nil {
+			utilities.Check(utilities.NewFileSystemError(
+				_path,
+				fmt.Sprintf("cannot rename to '%s' - file may already exist or path is invalid", filepath.Base(newFilePath)),
+				errRename,
+			))
+		}
+		_fileCache.RenameFile(_path, newFilePath, _fileContent)
+		return newFilePath
+	}
+
+	return _path
 }
