@@ -13,6 +13,7 @@ import (
 type Arguments struct {
 	CustomPath string
 	Debug      bool
+	Verbose    bool
 	Watch      bool
 }
 

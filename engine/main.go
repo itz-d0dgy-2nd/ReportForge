@@ -19,14 +19,16 @@ Flags:
   - --watch: enables file watcher
 */
 func setupArgumentParser() utilities.Arguments {
-	customPath := flag.String("customPath", "", "Custom path to report directory")
+	customPath := flag.String("customPath", utilities.RootDirectory, "Custom path to report directory")
 	debug := flag.Bool("debug", false, "Enable debug logging")
+	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	watch := flag.Bool("watch", false, "Enable file watcher")
 	flag.Parse()
 
 	return utilities.Arguments{
 		CustomPath: *customPath,
 		Debug:      *debug,
+		Verbose:    *verbose,
 		Watch:      *watch,
 	}
 }
@@ -137,7 +139,7 @@ func generateReport(_reportPaths utilities.ReportPaths, _fileCache *utilities.Fi
 
 func main() {
 	argumentsParsed := setupArgumentParser()
-	utilities.NewLogger(argumentsParsed.Debug)
+	utilities.NewLogger(argumentsParsed.Debug, argumentsParsed.Verbose)
 	reportPaths := setupReportPaths(argumentsParsed)
 	utilities.Logger.Info("initialising file cache", "path", reportPaths.RootPath)
 	fileCache := utilities.NewFileCache(reportPaths.RootPath)
