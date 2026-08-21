@@ -18,8 +18,14 @@ func findChromiumBrowser() string {
 	chromiumBrowsers := []string{"google-chrome", "chromium", "chromium-browser", "microsoft-edge"}
 	if runtime.GOOS == "windows" {
 		chromiumBrowsers = []string{"msedge.exe", "chrome.exe", "chromium.exe"}
+	} else if runtime.GOOS == "darwin" {
+		chromiumBrowsers = []string{
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		}
 	}
-
+	
 	for _, chromiumBrowser := range chromiumBrowsers {
 		if path, errLookPath := exec.LookPath(chromiumBrowser); errLookPath == nil {
 			return path
@@ -27,7 +33,7 @@ func findChromiumBrowser() string {
 	}
 
 	utilities.Check(utilities.NewExternalError(
-		"no Chromium-based browser found in $PATH — install Chrome, Chromium, or Edge",
+		"no Chromium-based browser found in $PATH, supported browsers are: Chormium, Google Chrome, Microsoft Edge",
 		nil,
 	))
 	return ""
