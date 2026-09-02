@@ -36,7 +36,7 @@ func ProcessMarkdown(_path string, _fileCache *utilities.FileCache) (utilities.M
 		return tokenMatch
 	})
 
-	reportRoot := filepath.Dir(filepath.Dir(filepath.Dir(_path)))
+	reportRoot := _fileCache.Path
 	unprocessedMarkdown = utilities.MarkdownPattern.Retest.ReplaceAllString(unprocessedMarkdown, "<$1$2$3>")
 	unprocessedMarkdown = utilities.MarkdownPattern.ImageScale.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3 style="$4"/>`)
 	unprocessedMarkdown = utilities.MarkdownPattern.Image.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3/>`)
