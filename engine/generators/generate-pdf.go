@@ -16,16 +16,21 @@ import (
 
 func findChromiumBrowser() string {
 	chromiumBrowsers := []string{"google-chrome", "chromium", "chromium-browser", "microsoft-edge"}
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		chromiumBrowsers = []string{"msedge.exe", "chrome.exe", "chromium.exe"}
-	} else if runtime.GOOS == "darwin" {
+	case "darwin":
 		chromiumBrowsers = []string{
+			"google-chrome",
+			"chromium",
 			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
 			"/Applications/Chromium.app/Contents/MacOS/Chromium",
 		}
+	default:
+		chromiumBrowsers = []string{"google-chrome", "chromium", "chromium-browser", "microsoft-edge"}
 	}
-	
+
 	for _, chromiumBrowser := range chromiumBrowsers {
 		if path, errLookPath := exec.LookPath(chromiumBrowser); errLookPath == nil {
 			return path

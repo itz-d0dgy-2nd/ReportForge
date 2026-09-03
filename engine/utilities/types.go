@@ -54,6 +54,7 @@ type MarkdownPatterns struct {
 	Retest     *regexp.Regexp
 	Image      *regexp.Regexp
 	ImageScale *regexp.Regexp
+	ImageSrc   *regexp.Regexp
 }
 
 type RiskPatterns struct {

@@ -23,6 +23,7 @@ func init() {
 		Retest:     regexp.MustCompile(`<p><(/?)(retest_)(fixed|not_fixed)></p>`),
 		Image:      regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>`),
 		ImageScale: regexp.MustCompile(`(<img\s+)src="(?:\.*\/)*(Screenshots/[^"]+)"([^>]*)\s*/>\{([^}]*)\}`),
+		ImageSrc:   regexp.MustCompile(`src="([^"]+)"`),
 	}
 
 	RiskPattern = RiskPatterns{

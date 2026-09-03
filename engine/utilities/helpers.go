@@ -144,30 +144,39 @@ func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _contentO
 		contentOrderMap[directory] = index
 	}
 
-	sort.Slice(_markdown, func(i, j int) bool {
-		directoryI := _markdown[i].Directory
-		directoryJ := _markdown[j].Directory
-
-		if directoryI == directoryJ {
-			return _markdown[i].FileName < _markdown[j].FileName
+	orderFile := func(file MarkdownFile) (int, bool) {
+		for _, key := range []string{file.FileName, file.Directory} {
+			if index, ok := contentOrderMap[key]; ok {
+				return index, ok
+			}
 		}
+		return 0, false
+	}
 
-		priorityI, orderedI := contentOrderMap[directoryI]
-		priorityJ, orderedJ := contentOrderMap[directoryJ]
+	sort.Slice(_markdown, func(i, j int) bool {
+		fileI := _markdown[i]
+		fileJ := _markdown[j]
+
+		priorityI, orderedI := orderFile(fileI)
+		priorityJ, orderedJ := orderFile(fileJ)
 
 		if orderedI && orderedJ {
 			return priorityI < priorityJ
 		}
 
-		if orderedI {
+		if orderedI && !orderedJ {
 			return true
 		}
 
-		if orderedJ {
+		if !orderedI && orderedJ {
 			return false
 		}
 
-		return directoryI < directoryJ
+		if fileI.Directory != fileJ.Directory {
+			return fileI.Directory < fileJ.Directory
+		}
+
+		return fileI.FileName < fileJ.FileName
 	})
 }
 

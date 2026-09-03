@@ -3,6 +3,7 @@ package processors
 import (
 	"ReportForge/engine/utilities"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -36,10 +37,19 @@ func ProcessMarkdown(_path string, _fileCache *utilities.FileCache) (utilities.M
 		return tokenMatch
 	})
 
-	reportRoot := _fileCache.Path
 	unprocessedMarkdown = utilities.MarkdownPattern.Retest.ReplaceAllString(unprocessedMarkdown, "<$1$2$3>")
-	unprocessedMarkdown = utilities.MarkdownPattern.ImageScale.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3 style="$4"/>`)
-	unprocessedMarkdown = utilities.MarkdownPattern.Image.ReplaceAllString(unprocessedMarkdown, `$1 src="`+reportRoot+`/$2"$3/>`)
+	unprocessedMarkdown = utilities.MarkdownPattern.ImageScale.ReplaceAllString(unprocessedMarkdown, `$1 src="`+_fileCache.Path+`/$2"$3 style="$4"/>`)
+	unprocessedMarkdown = utilities.MarkdownPattern.Image.ReplaceAllString(unprocessedMarkdown, `$1 src="`+_fileCache.Path+`/$2"$3/>`)
+
+	for _, subMatches := range utilities.MarkdownPattern.ImageSrc.FindAllStringSubmatch(unprocessedMarkdown, -1) {
+		if _, errStat := os.Stat(subMatches[1]); errStat != nil {
+			utilities.Check(utilities.NewValidationWarning(
+				subMatches[1],
+				"Image Not Found",
+			))
+		}
+
+	}
 
 	if strings.Contains(unprocessedMarkdown, "<qa>") {
 		count := strings.Count(unprocessedMarkdown, "<qa>")
