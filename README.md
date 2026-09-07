@@ -1,5 +1,5 @@
 <p align="center">
-    <img alt="ReportForge Logo" src="https://github.com/itz-d0dgy-2nd/ReportForge-Template/raw/main/report/0_report_template/html/images/logo.png">
+    <img alt="ReportForge Logo" src="https://raw.githubusercontent.com/itz-d0dgy-2nd/ReportForge-Technical-Template/refs/heads/main/report/0_report_template/images/logo.png">
 </p>
 
 > [!Note]
