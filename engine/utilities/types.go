@@ -17,11 +17,6 @@ type Arguments struct {
 	Watch      bool
 }
 
-type TemplateType struct {
-	Technical bool
-	Sra       bool
-}
-
 type ReportPaths struct {
 	RootPath        string
 	ConfigPath      string
@@ -89,6 +84,7 @@ type ReportError struct {
 type MetadataYML struct {
 	Client              string            `yaml:"Client"`
 	TargetInformation   map[string]string `yaml:"TargetInformation"`
+	DocumentType        string            `yaml:"DocumentType"`
 	DocumentName        string            `yaml:"DocumentName"`
 	DocumentInformation []struct {
 		DocumentCurrent    bool              `yaml:"DocumentCurrent"`
@@ -186,7 +182,6 @@ type MarkdownYML struct {
 
 	AppendixName      string `yaml:"AppendixName"`
 	AppendixTitle     string `yaml:"AppendixTitle"`
-	AppendixStatus    string `yaml:"AppendixStatus"`
 	AppendixAuthor    string `yaml:"AppendixAuthor"`
 	AppendixReviewers string `yaml:"AppendixReviewers"`
 }
@@ -307,7 +302,6 @@ type TemplateData struct {
 }
 
 type Watcher struct {
-	paused          atomic.Bool
 	skipNextTrigger atomic.Bool
 	watcher         *fsnotify.Watcher
 }

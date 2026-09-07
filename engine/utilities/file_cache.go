@@ -256,7 +256,7 @@ func (_fileCache *FileCache) ClearProcessedData() {
 	_fileCache.SeverityBarGraph = SeverityBarGraph{}
 	_fileCache.RiskMatrices = RiskMatrices{}
 
-	Logger.Debug("processed data cleared for regeneration")
+	Logger.Debug("Processed data cleared for regeneration")
 }
 
 /*

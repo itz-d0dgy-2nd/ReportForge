@@ -185,6 +185,7 @@ func HandleModifications(_reportPaths utilities.ReportPaths, _fileCache *utiliti
 		go modificationWorker(jobs, _fileCache, &workersWaitgroup)
 	}
 
+	_reportPaths = utilities.FilterPathsByDocumentType(_reportPaths, _fileCache.MetadataConfig().DocumentType)
 	directories := map[string]string{
 		_reportPaths.FindingsPath:    utilities.FindingsDirectory,
 		_reportPaths.SuggestionsPath: utilities.SuggestionsDirectory,

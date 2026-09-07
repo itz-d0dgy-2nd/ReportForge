@@ -5,8 +5,6 @@ import (
 	"ReportForge/engine/handlers"
 	"ReportForge/engine/utilities"
 	"flag"
-	"fmt"
-	"os"
 	"path/filepath"
 )
 
@@ -16,6 +14,7 @@ setupArgumentParser → configures and parses ReportForge command-line arguments
 Flags:
   - --customPath: specifies custom report directory path
   - --debug: enables debug logging
+  - --verbose: enables verbose logging
   - --watch: enables file watcher
 */
 func setupArgumentParser() utilities.Arguments {
@@ -34,67 +33,22 @@ func setupArgumentParser() utilities.Arguments {
 }
 
 /*
-setupReportTemplate → detects report template type from directory structure.
-*/
-func setupReportTemplate(_rootPath string) utilities.TemplateType {
-	var templateType utilities.TemplateType
-
-	if _, errStat := os.Stat(filepath.Join(_rootPath, utilities.FindingsDirectory)); errStat == nil {
-		templateType.Technical = true
-	}
-
-	if _, errStat := os.Stat(filepath.Join(_rootPath, utilities.RisksDirectory)); errStat == nil {
-		templateType.Sra = true
-	}
-
-	if templateType.Sra && templateType.Technical {
-		utilities.Check(utilities.NewConfigError(
-			_rootPath,
-			fmt.Sprintf("conflicting template types detected - found both '%s' and '%s' directories, but only one template type is allowed per report",
-				utilities.FindingsDirectory,
-				utilities.RisksDirectory,
-			),
-		))
-	}
-
-	if !templateType.Technical && !templateType.Sra {
-		utilities.Check(utilities.NewConfigError(
-			_rootPath,
-			fmt.Sprintf("unable to detect template type - expected either '%s' (technical) or '%s' (SRA) directory",
-				utilities.FindingsDirectory,
-				utilities.RisksDirectory,
-			),
-		))
-	}
-
-	return templateType
-}
-
-/*
 setupReportPaths → constructs and normalises all report directory paths.
 */
-func setupReportPaths(_argumentsProvided utilities.Arguments) utilities.ReportPaths {
-	rootPath := filepath.Clean(_argumentsProvided.CustomPath)
-	template := setupReportTemplate(rootPath)
-
-	conditionalPath := func(condition bool, dir string) string {
-		if condition {
-			return filepath.Clean(filepath.Join(rootPath, dir))
-		}
-		return ""
-	}
+func setupReportPaths(_customPath string) utilities.ReportPaths {
+	rootPath := filepath.Clean(_customPath)
 
 	return utilities.ReportPaths{
 		RootPath:        rootPath,
-		ConfigPath:      filepath.Clean(filepath.Join(rootPath, utilities.ConfigDirectory)),
-		TemplatePath:    filepath.Clean(filepath.Join(rootPath, utilities.TemplateDirectory)),
-		SummariesPath:   filepath.Clean(filepath.Join(rootPath, utilities.SummariesDirectory)),
-		FindingsPath:    conditionalPath(template.Technical, utilities.FindingsDirectory),
-		SuggestionsPath: conditionalPath(template.Technical, utilities.SuggestionsDirectory),
-		RisksPath:       conditionalPath(template.Sra, utilities.RisksDirectory),
-		ControlsPath:    conditionalPath(template.Sra, utilities.ControlsDirectory),
-		ScreenshotsPath: filepath.Clean(filepath.Join(rootPath, utilities.ScreenshotsDirectory)),
-		AppendicesPath:  filepath.Clean(filepath.Join(rootPath, utilities.AppendicesDirectory)),
+		ConfigPath:      filepath.Join(rootPath, utilities.ConfigDirectory),
+		TemplatePath:    filepath.Join(rootPath, utilities.TemplateDirectory),
+		SummariesPath:   filepath.Join(rootPath, utilities.SummariesDirectory),
+		FindingsPath:    filepath.Join(rootPath, utilities.FindingsDirectory),
+		SuggestionsPath: filepath.Join(rootPath, utilities.SuggestionsDirectory),
+		RisksPath:       filepath.Join(rootPath, utilities.RisksDirectory),
+		ControlsPath:    filepath.Join(rootPath, utilities.ControlsDirectory),
+		ScreenshotsPath: filepath.Join(rootPath, utilities.ScreenshotsDirectory),
+		AppendicesPath:  filepath.Join(rootPath, utilities.AppendicesDirectory),
 	}
 }
 
@@ -134,29 +88,25 @@ func generateReport(_reportPaths utilities.ReportPaths, _fileCache *utilities.Fi
 	utilities.Logger.Info("Generating XLSX")
 	generators.GenerateXLSX(_fileCache)
 
-	utilities.Logger.Info("report generation complete")
+	utilities.Logger.Info("Report generation complete")
 }
 
 func main() {
 	argumentsParsed := setupArgumentParser()
 	utilities.NewLogger(argumentsParsed.Debug, argumentsParsed.Verbose)
-	reportPaths := setupReportPaths(argumentsParsed)
-	utilities.Logger.Info("initialising file cache", "path", reportPaths.RootPath)
+	reportPaths := setupReportPaths(argumentsParsed.CustomPath)
 	fileCache := utilities.NewFileCache(reportPaths.RootPath)
+
 	generateReport(reportPaths, fileCache)
 
 	if argumentsParsed.Watch {
 		watcher, errWatcher := utilities.NewWatcher()
-		if errWatcher != nil {
-			utilities.Check(errWatcher)
-		}
+		utilities.Check(errWatcher)
 		defer watcher.Close()
 
-		errWatcher = watcher.WatchForChanges(reportPaths.RootPath, fileCache, func(changedFile string) {
+		errWatcher = watcher.WatchForChanges(reportPaths.RootPath, fileCache, func() {
 			generateReport(reportPaths, fileCache)
 		})
-		if errWatcher != nil {
-			utilities.Check(errWatcher)
-		}
+		utilities.Check(errWatcher)
 	}
 }

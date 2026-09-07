@@ -167,6 +167,7 @@ func HandleProcessing(_reportPaths utilities.ReportPaths, _fileCache *utilities.
 		go processingWorker(jobs, results, _fileCache, &workersWaitgroup)
 	}
 
+	_reportPaths = utilities.FilterPathsByDocumentType(_reportPaths, _fileCache.MetadataConfig().DocumentType)
 	directories := map[string]string{
 		_reportPaths.SummariesPath:   utilities.SummariesDirectory,
 		_reportPaths.FindingsPath:    utilities.FindingsDirectory,

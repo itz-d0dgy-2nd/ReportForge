@@ -20,7 +20,7 @@ func (_watcher *Watcher) Close() {
 /*
 WatchForChanges → Watches report directory for file changes and triggers callback with changed file path
 */
-func (_watcher *Watcher) WatchForChanges(_reportPath string, _fileCache *FileCache, _onFileChange func(_changedFile string)) error {
+func (_watcher *Watcher) WatchForChanges(_reportPath string, _fileCache *FileCache, _onFileChange func()) error {
 	var (
 		debounceTimer = time.NewTimer(0)
 		pendingFiles  = make(map[string]struct{})
@@ -49,8 +49,8 @@ func (_watcher *Watcher) WatchForChanges(_reportPath string, _fileCache *FileCac
 				}
 			}
 
-			if watcherEvent.Op&(fsnotify.Write|fsnotify.Create) != 0 {
-				if ignoreFiles(watcherEvent.Name) || _watcher.paused.Load() {
+			if watcherEvent.Op&fsnotify.Write != 0 {
+				if ignoreFiles(watcherEvent.Name) {
 					continue
 				}
 
@@ -88,7 +88,7 @@ func (_watcher *Watcher) WatchForChanges(_reportPath string, _fileCache *FileCac
 				}
 			}
 
-			_onFileChange("")
+			_onFileChange()
 			if configChanged {
 				_watcher.skipNextTrigger.Store(true)
 				debounceTimer.Reset(2 * time.Second)

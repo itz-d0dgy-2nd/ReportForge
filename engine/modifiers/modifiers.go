@@ -164,6 +164,7 @@ func ModifyIdentifiers(_path, _identifierPrefix string, _reservedID int32, _file
 	var identifierRegex *regexp.Regexp
 
 	rawMarkdownContent, _, unprocessedYaml := utilities.ParseFile(_path, _fileCache)
+	originalMarkdownContent := rawMarkdownContent
 
 	switch utilities.GetDirectoryType(_path) {
 	case utilities.FindingsDirectory:
@@ -185,11 +186,15 @@ func ModifyIdentifiers(_path, _identifierPrefix string, _reservedID int32, _file
 	}
 
 	if identifierLocked {
-		if utilities.DocumentStatus != utilities.ReportStatusRelease {
+		if utilities.DocumentStatus != utilities.DocumentStatusRelease {
 			return
 		}
 
 		if !strings.Contains(rawMarkdownContent, identifierLockField+": false") && !strings.Contains(rawMarkdownContent, identifierLockField+":false") {
+			return
+		}
+
+		if rawMarkdownContent == originalMarkdownContent {
 			return
 		}
 
@@ -204,12 +209,16 @@ func ModifyIdentifiers(_path, _identifierPrefix string, _reservedID int32, _file
 	generatedIdentifier := fmt.Sprintf("%s%d", _identifierPrefix, _reservedID)
 	rawMarkdownContent = identifierRegex.ReplaceAllString(rawMarkdownContent, "${1}"+generatedIdentifier)
 
-	if utilities.DocumentStatus == utilities.ReportStatusRelease {
+	if utilities.DocumentStatus == utilities.DocumentStatusRelease {
 		if strings.Contains(rawMarkdownContent, identifierLockField+": false") {
 			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+": false", identifierLockField+": true", 1)
 		} else if strings.Contains(rawMarkdownContent, identifierLockField+":") {
 			rawMarkdownContent = strings.Replace(rawMarkdownContent, identifierLockField+":", identifierLockField+": true", 1)
 		}
+	}
+
+	if rawMarkdownContent == originalMarkdownContent {
+		return
 	}
 
 	if errWriteFile := os.WriteFile(_path, []byte(rawMarkdownContent), 0644); errWriteFile != nil {

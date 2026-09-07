@@ -54,6 +54,18 @@ func (_metadata *MetadataYML) Validate(_path string) {
 		Check(NewValidationError(_path, "Client", "field is required"))
 	}
 
+	if strings.TrimSpace(_metadata.DocumentType) == "" {
+		Check(NewValidationError(_path, "DocumentType", "field is required"))
+	}
+
+	if strings.TrimSpace(_metadata.DocumentType) != DocumentTypeTechnical && strings.TrimSpace(_metadata.DocumentType) != DocumentTypeSra {
+		Check(NewValidationError(
+			_path,
+			"DocumentType",
+			fmt.Sprintf("must be '%s' or '%s', got '%s'", DocumentTypeTechnical, DocumentTypeSra, strings.TrimSpace(_metadata.DocumentType)),
+		))
+	}
+
 	if strings.TrimSpace(_metadata.DocumentName) == "" {
 		Check(NewValidationError(_path, "DocumentName", "field is required"))
 	}
@@ -72,11 +84,11 @@ func (_metadata *MetadataYML) Validate(_path string) {
 		}
 
 		if status, exists := information.DocumentVersioning["DocumentStatus"]; exists {
-			if status != ReportStatusDraft && status != ReportStatusRelease {
+			if status != DocumentStatusDraft && status != DocumentStatusRelease {
 				Check(NewValidationError(
 					_path,
 					fmt.Sprintf("DocumentInformation[%d].DocumentStatus", i),
-					fmt.Sprintf("must be '%s' or '%s', got '%s'", ReportStatusDraft, ReportStatusRelease, status),
+					fmt.Sprintf("must be '%s' or '%s', got '%s'", DocumentStatusDraft, DocumentStatusRelease, status),
 				))
 			}
 		}
@@ -358,7 +370,7 @@ func (_markdown *MarkdownYML) Validate(_rawYaml map[string]any, _path string) {
 		SuggestionsDirectory: {"SuggestionID", "SuggestionIDLocked", "SuggestionName", "SuggestionTitle", "SuggestionStatus", "SuggestionAuthor", "SuggestionReviewers"},
 		RisksDirectory:       {"RiskID", "RiskIDLocked", "RiskName", "RiskTitle", "RiskGrossImpact", "RiskGrossLikelihood", "RiskGrossRating", "RiskTargetImpact", "RiskTargetLikelihood", "RiskTargetRating", "RiskAuthor", "RiskReviewers"},
 		ControlsDirectory:    {"ControlID", "ControlIDLocked", "ControlName", "ControlTitle", "ControlNZISMReferences", "ControlAuthor", "ControlReviewers"},
-		AppendicesDirectory:  {"AppendixName", "AppendixTitle", "AppendixStatus", "AppendixAuthor", "AppendixReviewers"},
+		AppendicesDirectory:  {"AppendixName", "AppendixTitle", "AppendixAuthor", "AppendixReviewers"},
 	}
 
 	var missingKeys []string
@@ -381,7 +393,7 @@ func (_markdown *MarkdownYML) Validate(_rawYaml map[string]any, _path string) {
 		))
 	}
 
-	if strings.Contains(_path, ControlsDirectory) {
+	if GetDirectoryType(_path) == ControlsDirectory {
 		for _, cid := range _markdown.ControlNZISMReferences {
 			if !YAMLPattern.CIDRef.MatchString(cid) {
 				Check(NewValidationWarning(

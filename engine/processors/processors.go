@@ -66,7 +66,7 @@ func ProcessMarkdown(_path string, _fileCache *utilities.FileCache) (utilities.M
 		Body:      unprocessedMarkdown,
 	}
 
-	if strings.Contains(_path, utilities.FindingsDirectory) {
+	if utilities.GetDirectoryType(_path) == utilities.FindingsDirectory {
 		severityConfig := _fileCache.SeverityConfig()
 
 		impactIndex := slices.Index(severityConfig.Impacts, unprocessedYaml.FindingImpact)
@@ -94,7 +94,7 @@ func ProcessMarkdown(_path string, _fileCache *utilities.FileCache) (utilities.M
 		}
 	}
 
-	if strings.Contains(_path, utilities.RisksDirectory) {
+	if utilities.GetDirectoryType(_path) == utilities.RisksDirectory {
 		riskConfig := _fileCache.RiskConfig()
 
 		grossImpactIndex := slices.Index(riskConfig.GrossImpacts, unprocessedYaml.RiskGrossImpact)

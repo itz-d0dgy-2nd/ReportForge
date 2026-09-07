@@ -8,10 +8,10 @@ import (
 func init() {
 	YAMLPattern = YAMLPatterns{
 		Frontmatter:  regexp.MustCompile(`(?s)^---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n(.*))?$`),
-		FindingID:    regexp.MustCompile(`(?m)^(\s*FindingID\s*:\s*).*$`),
-		SuggestionID: regexp.MustCompile(`(?m)^(\s*SuggestionID\s*:\s*).*$`),
-		RiskID:       regexp.MustCompile(`(?m)^(\s*RiskID\s*:\s*).*$`),
-		ControlID:    regexp.MustCompile(`(?m)^(\s*ControlID\s*:\s*).*$`),
+		FindingID:    regexp.MustCompile(`(?m)^([ \t]*FindingID[ \t]*:[ \t]*).*$`),
+		SuggestionID: regexp.MustCompile(`(?m)^([ \t]*SuggestionID[ \t]*:[ \t]*).*$`),
+		RiskID:       regexp.MustCompile(`(?m)^([ \t]*RiskID[ \t]*:[ \t]*).*$`),
+		ControlID:    regexp.MustCompile(`(?m)^([ \t]*ControlID[ \t]*:[ \t]*).*$`),
 		Severity:     regexp.MustCompile(`FindingSeverity:[^\n]*`),
 		GrossRating:  regexp.MustCompile(`RiskGrossRating:[^\n]*`),
 		TargetRating: regexp.MustCompile(`RiskTargetRating:[^\n]*`),

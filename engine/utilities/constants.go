@@ -42,10 +42,16 @@ const (
 	ConfigFileContentOrder       string = "content_order"
 )
 
-// ======== Report Status Constants ========
+// ======== Document Type Constants ========
 const (
-	ReportStatusDraft   string = "Draft"
-	ReportStatusRelease string = "Release"
+	DocumentTypeTechnical string = "Technical"
+	DocumentTypeSra       string = "Sra"
+)
+
+// ======== Document Status Constants ========
+const (
+	DocumentStatusDraft   string = "Draft"
+	DocumentStatusRelease string = "Release"
 )
 
 // ======== Finding Status Constants ========

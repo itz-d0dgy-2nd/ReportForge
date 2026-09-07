@@ -70,6 +70,19 @@ func GetDirectoryType(_path string) string {
 	return ""
 }
 
+func FilterPathsByDocumentType(_reportPaths ReportPaths, _documentType string) ReportPaths {
+	switch _documentType {
+	case DocumentTypeTechnical:
+		_reportPaths.RisksPath = ""
+		_reportPaths.ControlsPath = ""
+	case DocumentTypeSra:
+		_reportPaths.FindingsPath = ""
+		_reportPaths.SuggestionsPath = ""
+	}
+
+	return _reportPaths
+}
+
 /*
 SortSeverityMatrix → Sorts severity matrix finding IDs alphabetically within each cell
 */
@@ -184,7 +197,7 @@ func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _contentO
 OptimiseImagesForPDF → Resizes images for PDF optimisation in Release mode only.
 */
 func OptimiseImagesForPDF(_path string) {
-	if DocumentStatus != ReportStatusRelease {
+	if DocumentStatus != DocumentStatusRelease {
 		return
 	}
 
