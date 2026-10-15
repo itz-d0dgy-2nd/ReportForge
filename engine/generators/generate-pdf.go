@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
 
@@ -85,25 +84,37 @@ func renderPDF(_fileURL string, _browserPath string) []byte {
 	defer chromiumBrowserContextCancel()
 
 	var buffer []byte
-	errChromedp := chromedp.Run(chromiumBrowserContext,
-		chromedp.Navigate(_fileURL),
-		chromedp.ActionFunc(func(context context.Context) error {
-			print, _, errPrintToPDF := page.PrintToPDF().
-				WithPrintBackground(true).
-				WithMarginTop(0).
-				WithMarginBottom(0).
-				WithMarginLeft(0).
-				WithMarginRight(0).
-				WithPreferCSSPageSize(true).
-				WithGenerateTaggedPDF(true).
-				Do(context)
-			if errPrintToPDF != nil {
-				return errPrintToPDF
-			}
-			buffer = print
-			return nil
-		}),
-	)
+	// OLD CHROMEDP VERSION
+	// errChromedp := chromedp.Run(chromiumBrowserContext,
+	// 	chromedp.Navigate(_fileURL),
+	// 	chromedp.ActionFunc(func(context context.Context) error {
+	// 		print, _, errPrintToPDF := page.PrintToPDF().
+	// 			WithPrintBackground(true).
+	// 			WithMarginTop(0).
+	// 			WithMarginBottom(0).
+	// 			WithMarginLeft(0).
+	// 			WithMarginRight(0).
+	// 			WithPreferCSSPageSize(true).
+	// 			WithGenerateTaggedPDF(true).
+	// 			Do(context)
+	// 		if errPrintToPDF != nil {
+	// 			return errPrintToPDF
+	// 		}
+	// 		buffer = print
+	// 		return nil
+	// 	}),
+	// )
+	// TEST FIX FOR NEW CHROMEDP VERSION
+	errChromedp := chromedp.Do(chromiumBrowserContext, chromedp.Navigate(_fileURL))
+	if errChromedp == nil {
+		buffer, errChromedp = chromedp.Run(chromiumBrowserContext, chromedp.PrintToPDF(
+			chromedp.PDFPrintBackground(),
+			chromedp.PDFMargins(0, 0, 0, 0),
+			chromedp.PDFPreferCSSPageSize(),
+			chromedp.PDFOutlineAndTagged(),
+		))
+	}
+
 	if errChromedp != nil {
 		utilities.Check(utilities.NewExternalError(
 			fmt.Sprintf("Chrome DevTools Protocol error rendering '%s'", _fileURL),
