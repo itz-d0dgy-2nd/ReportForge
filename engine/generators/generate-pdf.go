@@ -17,7 +17,13 @@ func findChromiumBrowser() string {
 	chromiumBrowsers := []string{"google-chrome", "chromium", "chromium-browser", "microsoft-edge"}
 	switch runtime.GOOS {
 	case "windows":
-		chromiumBrowsers = []string{"msedge.exe", "chrome.exe", "chromium.exe"}
+		chromiumBrowsers = []string{
+			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
+			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
+			"msedge.exe",
+			"chrome.exe",
+			"chromium.exe",
+		}
 	case "darwin":
 		chromiumBrowsers = []string{
 			"google-chrome",
@@ -31,7 +37,15 @@ func findChromiumBrowser() string {
 	}
 
 	for _, chromiumBrowser := range chromiumBrowsers {
+		if filepath.IsAbs(chromiumBrowser) {
+			if _, err := os.Stat(chromiumBrowser); err == nil {
+				utilities.Logger.Debug("Chromium Browser ABS Found: " + chromiumBrowser)
+				return chromiumBrowser
+			}
+			continue
+		}
 		if path, errLookPath := exec.LookPath(chromiumBrowser); errLookPath == nil {
+			utilities.Logger.Debug("Chromium Browser PATH Found: " + chromiumBrowser)
 			return path
 		}
 	}
