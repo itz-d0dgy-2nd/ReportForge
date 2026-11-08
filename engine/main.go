@@ -75,6 +75,7 @@ func generateReport(_reportPaths utilities.ReportPaths, _fileCache *utilities.Fi
 	utilities.SortReportData(_fileCache.Suggestions, utilities.SuggestionsDirectory, contentConfig)
 	utilities.SortReportData(_fileCache.Risks, utilities.RisksDirectory, contentConfig)
 	utilities.SortReportData(_fileCache.Controls, utilities.ControlsDirectory, contentConfig)
+	utilities.SortReportData(_fileCache.Appendices, utilities.AppendicesDirectory, contentConfig)
 
 	utilities.Logger.Info("Optimising images")
 	utilities.OptimiseImagesForPDF(_reportPaths.ScreenshotsPath)

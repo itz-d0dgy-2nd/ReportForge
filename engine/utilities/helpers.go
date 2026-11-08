@@ -40,8 +40,7 @@ func IsRootLevelFile(_path string) bool {
 	return filepath.Base(filepath.Dir(_path)) == FindingsDirectory ||
 		filepath.Base(filepath.Dir(_path)) == SuggestionsDirectory ||
 		filepath.Base(filepath.Dir(_path)) == RisksDirectory ||
-		filepath.Base(filepath.Dir(_path)) == ControlsDirectory ||
-		filepath.Base(filepath.Dir(_path)) == AppendicesDirectory
+		filepath.Base(filepath.Dir(_path)) == ControlsDirectory
 }
 
 /*
@@ -140,6 +139,8 @@ func SortReportData(_markdown []MarkdownFile, _parentDirectory string, _contentO
 		contentOrderList = _contentOrder.Risks
 	case ControlsDirectory:
 		contentOrderList = _contentOrder.Controls
+	case AppendicesDirectory:
+		contentOrderList = _contentOrder.Appendices
 	}
 
 	if len(contentOrderList) == 0 {

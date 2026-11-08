@@ -126,6 +126,7 @@ type ContentOrderYML struct {
 	Suggestions                  []string          `yaml:"Suggestions"`
 	Risks                        []string          `yaml:"Risks"`
 	Controls                     []string          `yaml:"Controls"`
+	Appendices                   []string          `yaml:"Appendices"`
 	FindingIdentifierPrefixes    map[string]string `yaml:"FindingIdentifierPrefixes"`
 	SuggestionIdentifierPrefixes map[string]string `yaml:"SuggestionIdentifierPrefixes"`
 	RiskIdentifierPrefixes       map[string]string `yaml:"RiskIdentifierPrefixes"`
